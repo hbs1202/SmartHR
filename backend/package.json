@@ -1,0 +1,51 @@
+{
+  "name": "smarthr-backend",
+  "version": "1.0.0",
+  "description": "SmartHR 인사관리 시스템 백엔드 API 서버",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:company": "node tests/api/test-company-api.js",
+    "test:subcompany": "node tests/api/test-subcompany-api.js",
+    "test:department": "node tests/api/test-department-api.js",
+    "test:position": "node tests/api/test-position-api.js",
+    "test:organization": "node tests/api/test-organization-api.js",
+    "test:all-api": "node tests/api/test-company-api.js && node tests/api/test-subcompany-api.js && node tests/api/test-department-api.js && node tests/api/test-position-api.js && node tests/api/test-organization-api.js",
+    "test:db": "node tests/integration/test-db-connection.js",
+    "test:auth": "node tests/unit/test-auth-utils.js"
+  },
+  "keywords": [
+    "smarthr",
+    "hr-system",
+    "nodejs",
+    "express",
+    "mssql"
+  ],
+  "author": "SmartHR Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.12.1",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "mssql": "^10.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.6.2",
+    "nodemon": "^3.0.1",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
