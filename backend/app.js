@@ -39,16 +39,27 @@ app.use(helmet({
  * CORS 설정
  */
 const corsOptions = {
-  origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:3002',
-    'http://localhost:3003'
-  ],
+  origin: function (origin, callback) {
+    console.log('🔍 CORS 체크 - Origin:', origin);
+    // 모든 origin 허용 (개발용)
+    callback(null, true);
+  },
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 };
 app.use(cors(corsOptions));
+
+// OPTIONS 요청에 대한 추가 처리 (프리플라이트)
+app.options('*', (req, res) => {
+  console.log(`🔍 CORS 프리플라이트 요청: ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 /**
  * Rate Limiting 설정
@@ -78,6 +89,7 @@ if (process.env.NODE_ENV !== 'test') {
  */
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 
 /**
  * 루트 엔드포인트
@@ -176,13 +188,15 @@ app.use((err, req, res, next) => {
 const server = app.listen(PORT, () => {
   console.log(`
   🚀 SmartHR API 서버가 시작되었습니다!
-  
+
   📍 서버 주소: http://localhost:${PORT}
   🌍 환경: ${process.env.NODE_ENV || 'development'}
   📊 헬스체크: http://localhost:${PORT}/health
-  
+  🔐 로그인 테스트: POST http://localhost:${PORT}/api/auth/login
+
   ⚡ 서버가 준비되었습니다!
   `);
+
 });
 
 /**

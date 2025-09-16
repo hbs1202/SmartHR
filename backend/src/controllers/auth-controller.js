@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const { authenticateToken } = require('../middleware/auth');
 const { executeStoredProcedureWithNamedParams } = require('../database/dbHelper');
 
+
 /**
  * 로그인 API
  * @route POST /api/auth/login
@@ -20,6 +21,7 @@ const { executeStoredProcedureWithNamedParams } = require('../database/dbHelper'
  */
 router.post('/login', async (req, res) => {
   try {
+
     // 1. 요청 데이터 추출 및 검증
     const { email, password } = req.body;
 
@@ -51,12 +53,10 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    console.log('🔄 로그인 시도:', { email: email, timestamp: new Date().toISOString() });
-
     // 5. Stored Procedure 호출하여 사용자 정보 조회
     const spParams = {
       Email: email,
-      Password: password // SP에서는 비밀번호 검증용으로만 사용
+      Password: password
     };
 
     const result = await executeStoredProcedureWithNamedParams('SP_AuthLogin', spParams);
@@ -89,15 +89,15 @@ router.post('/login', async (req, res) => {
 
     // 8. bcrypt로 비밀번호 검증
     const isPasswordValid = await bcrypt.compare(password, userData.HashedPassword);
-    
+
     if (!isPasswordValid) {
-      console.warn('🚫 비밀번호 불일치:', { 
+      console.warn('🚫 비밀번호 불일치:', {
         email: email,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       });
 
       // TODO: 로그인 실패 카운트 증가 (x_IncrementLoginFailCount)
-      
+
       return res.status(401).json({
         success: false,
         data: null,
