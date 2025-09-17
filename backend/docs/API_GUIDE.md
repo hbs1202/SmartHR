@@ -10,6 +10,7 @@ SmartHR 백엔드 API 개발을 위한 상세 가이드입니다.
 - [인증 미들웨어](#인증-미들웨어)
 - [입력값 검증](#입력값-검증)
 - [테스트 가이드](#테스트-가이드)
+- [프론트엔드 연동 가이드](#프론트엔드-연동-가이드)
 
 ## API 컨트롤러 표준 템플릿
 
@@ -529,3 +530,235 @@ Expected Response:
 - XSS 방지
 - CSRF 방지
 - 민감 정보 로깅 방지
+
+## 프론트엔드 연동 가이드
+
+### React + TypeScript 연동
+
+#### API 서비스 작성
+```typescript
+// services/companyService.ts
+import api from './api';
+import type { ApiResponse } from '../types/api';
+
+export interface Company {
+  CompanyId: number;           // PascalCase - API 응답 구조
+  CompanyCode: string;
+  CompanyName: string;
+  BusinessNumber?: string;
+  // ... 기타 필드
+}
+
+export interface CompanyCreateRequest {
+  companyCode: string;         // camelCase - 요청 구조
+  companyName: string;
+  businessNumber?: string;
+  // ... 기타 필드
+}
+
+export const getCompanies = async (params: CompanyListParams = {}): Promise<ApiResponse<CompanyListResponse>> => {
+  try {
+    const response = await api.get<ApiResponse<CompanyListResponse>>('/api/organization/companies', { params });
+    return response.data;
+  } catch (error: unknown) {
+    console.error('회사 목록 조회 오류:', error);
+    throw error;
+  }
+};
+```
+
+#### 타입 안전성 확보
+```typescript
+// 응답 타입과 요청 타입 구분
+interface Company {          // API 응답 (PascalCase)
+  CompanyId: number;
+  CompanyName: string;
+}
+
+interface CompanyCreateRequest {  // API 요청 (camelCase)
+  companyCode: string;
+  companyName: string;
+}
+
+// 에러 처리 타입 안전성
+try {
+  const response = await createCompany(data);
+} catch (error: unknown) {
+  const axiosError = error as {
+    response?: {
+      data?: { message?: string };
+      status?: number
+    };
+    message?: string
+  };
+
+  if (axiosError.response?.data?.message) {
+    message.error(axiosError.response.data.message);
+  }
+}
+```
+
+#### React 컴포넌트 연동
+```typescript
+const CompanyList: React.FC = () => {
+  const [companies, setCompanies] = useState<Company[]>([]);
+
+  // useCallback으로 성능 최적화
+  const fetchCompanies = useCallback(async (params: CompanyListParams = filters) => {
+    try {
+      setLoading(true);
+      const response = await getCompanies(params);
+
+      if (response && response.success && response.data) {
+        setCompanies(response.data.companies);
+      }
+    } catch (error: unknown) {
+      console.error('조회 오류:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  // React Hooks exhaustive-deps 규칙 준수
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
+};
+```
+
+### API 응답 처리 패턴
+
+#### 성공 응답 처리
+```typescript
+const response = await createCompany(formData);
+
+// 유연한 성공 조건 처리
+if (response && (response.success === true || String(response.success) === 'true' || !('success' in response))) {
+  message.success('회사가 성공적으로 등록되었습니다.');
+  // 성공 처리 로직
+} else {
+  message.error(response?.message || '등록에 실패했습니다.');
+}
+```
+
+#### 에러 응답 처리
+```typescript
+catch (error: unknown) {
+  const axiosError = error as {
+    response?: {
+      data?: { message?: string };
+      status?: number
+    };
+    message?: string
+  };
+
+  if (axiosError.response?.data?.message) {
+    message.error(axiosError.response.data.message);
+  } else if (axiosError.response?.status === 400) {
+    message.error('입력 정보를 확인해주세요.');
+  } else if (axiosError.response?.status === 409) {
+    message.error('이미 존재하는 데이터입니다.');
+  } else {
+    message.error('처리 중 오류가 발생했습니다.');
+  }
+}
+```
+
+### 폼 처리 및 유효성 검사
+
+#### Ant Design Form 연동
+```typescript
+const handleSubmit = async (values: CompanyCreateRequest) => {
+  try {
+    // 날짜 포맷팅
+    const formData: CompanyCreateRequest = {
+      ...values,
+      establishDate: values.establishDate ? dayjs(values.establishDate).format('YYYY-MM-DD') : undefined,
+    };
+
+    // 클라이언트 사이드 유효성 검증
+    const validation = validateCompanyForm(formData);
+    if (!validation.isValid) {
+      message.error(validation.errors.join('\n'));
+      return;
+    }
+
+    // API 호출
+    const response = await createCompany(formData);
+
+    if (response?.success) {
+      message.success('등록이 완료되었습니다.');
+      form.resetFields();
+      setIsModalOpen(false);
+      await fetchCompanies(); // 목록 새로고침
+    }
+  } catch (error: unknown) {
+    // 에러 처리
+  }
+};
+```
+
+#### 자동 포맷팅 구현
+```typescript
+// 사업자등록번호 자동 포맷팅
+const handleBusinessNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const formatted = formatBusinessNumber(e.target.value);
+  form.setFieldValue('businessNumber', formatted);
+};
+
+// 포맷팅 함수
+export const formatBusinessNumber = (value: string): string => {
+  const numbers = value.replace(/\D/g, '');
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 5) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  return `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5, 10)}`;
+};
+```
+
+### 외부 API 연동
+
+#### 다음 우편번호 검색 API
+```typescript
+declare global {
+  interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          address: string;
+          zonecode: string;
+        }) => void;
+      }) => {
+        open: () => void;
+      };
+    };
+  }
+}
+
+const openAddressSearch = () => {
+  new window.daum.Postcode({
+    oncomplete: (data) => {
+      form.setFieldsValue({
+        postalCode: data.zonecode,
+        address: data.address,
+      });
+    }
+  }).open();
+};
+```
+
+### 성능 최적화
+
+#### React 최적화
+- useCallback을 사용한 함수 메모이제이션
+- React.memo를 사용한 컴포넌트 메모이제이션
+- 의존성 배열 정확한 관리 (exhaustive-deps)
+
+#### TypeScript 최적화
+- `any` 타입 사용 금지
+- 구체적인 타입 정의 사용
+- 에러 처리에 `unknown` 타입 사용
+
+#### UI/UX 최적화
+- 모달 시스템으로 페이지 이동 최소화
+- 로딩 상태 명확한 표시
+- 에러 메시지 사용자 친화적 표시

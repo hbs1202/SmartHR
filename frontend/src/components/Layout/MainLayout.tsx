@@ -40,6 +40,7 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   // 화면 크기 감지
   useEffect(() => {
@@ -55,6 +56,12 @@ const MainLayout: React.FC = () => {
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  // 페이지 변경 시 서브메뉴 자동 열기
+  useEffect(() => {
+    const newOpenKeys = getOpenKeys();
+    setOpenKeys(newOpenKeys);
+  }, [location.pathname]);
 
   // 현재 로그인한 사용자 정보
   const userInfo = authService.getUserInfo();
@@ -117,7 +124,21 @@ const MainLayout: React.FC = () => {
     {
       key: '/organization',
       icon: <BankOutlined />,
-      label: '조직도 관리',
+      label: '조직 관리',
+      children: [
+        {
+          key: '/organization/company',
+          label: '회사 등록',
+        },
+        {
+          key: '/organization/workplace',
+          label: '사업장 등록',
+        },
+        {
+          key: '/organization/department',
+          label: '부서 등록',
+        },
+      ],
     },
     {
       key: '/assignments',
@@ -144,15 +165,30 @@ const MainLayout: React.FC = () => {
   };
 
   /**
+   * 서브메뉴 열기/닫기 처리
+   */
+  const handleOpenChange = (keys: string[]) => {
+    setOpenKeys(keys);
+  };
+
+  /**
    * 현재 경로를 기반으로 선택된 메뉴 키 계산
    */
   const getSelectedKeys = () => {
     const pathname = location.pathname;
 
-    // 정확한 경로 매칭
-    const exactMatch = menuItems.find(item => item.key === pathname);
-    if (exactMatch) {
-      return [exactMatch.key];
+    // 정확한 경로 매칭 (서브메뉴 포함)
+    for (const item of menuItems) {
+      if (item.key === pathname) {
+        return [item.key];
+      }
+      // 서브메뉴 확인
+      if (item.children) {
+        const subMatch = item.children.find(child => child.key === pathname);
+        if (subMatch) {
+          return [subMatch.key];
+        }
+      }
     }
 
     // 부분 경로 매칭 (예: /employees/123 → /employees)
@@ -165,6 +201,25 @@ const MainLayout: React.FC = () => {
 
     // 기본값
     return ['/dashboard'];
+  };
+
+  /**
+   * 현재 경로를 기반으로 열린 서브메뉴 키 계산
+   */
+  const getOpenKeys = () => {
+    const pathname = location.pathname;
+
+    // 서브메뉴가 열려야 하는 부모 메뉴 찾기
+    for (const item of menuItems) {
+      if (item.children) {
+        const hasActiveChild = item.children.some(child => pathname.startsWith(child.key));
+        if (hasActiveChild) {
+          return [item.key];
+        }
+      }
+    }
+
+    return [];
   };
 
   return (
@@ -230,13 +285,15 @@ const MainLayout: React.FC = () => {
           theme="dark"
           mode="inline"
           selectedKeys={getSelectedKeys()}
+          openKeys={openKeys}
+          onOpenChange={handleOpenChange}
           items={menuItems}
           onClick={handleMenuClick}
         />
       </Sider>
 
       {/* 메인 레이아웃 */}
-      <Layout style={{ marginLeft: isMobile ? 0 : (collapsed ? 80 : 200) }}>
+      <Layout>
         {/* 헤더 */}
         <Header
           style={{

@@ -131,12 +131,18 @@ const createCompany = async (req, res) => {
       companyName,
       companyNameEng,
       businessNumber,
+      corporateNumber,
       ceoName,
       establishDate,
+      postalCode,
       address,
+      addressDetail,
       phoneNumber,
+      faxNumber,
       email,
-      industry
+      industry,
+      businessType,
+      isActive = true  // 기본값을 활성으로 설정
     } = req.body;
 
     // 2. 필수 파라미터 검증
@@ -161,12 +167,18 @@ const createCompany = async (req, res) => {
       CompanyName: companyName,
       CompanyNameEng: companyNameEng,
       BusinessNumber: businessNumber,
+      CorporateNumber: corporateNumber,
       CeoName: ceoName,
       EstablishDate: establishDate ? new Date(establishDate) : null,
+      PostalCode: postalCode,
       Address: address,
+      AddressDetail: addressDetail,
       PhoneNumber: phoneNumber,
+      FaxNumber: faxNumber,
       Email: email,
       Industry: industry,
+      BusinessType: businessType,
+      IsActive: isActive ? 1 : 0,  // boolean을 bit로 변환
       CreatedBy: req.user?.userId || 1
     });
 
@@ -356,15 +368,21 @@ const updateCompany = async (req, res) => {
     // 1. 경로 파라미터 및 요청 데이터 추출
     const { id: companyId } = req.params;
     const {
+      companyCode,
       companyName,
       companyNameEng,
       businessNumber,
+      corporateNumber,
       ceoName,
       establishDate,
+      postalCode,
       address,
+      addressDetail,
       phoneNumber,
+      faxNumber,
       email,
       industry,
+      businessType,
       isActive
     } = req.body;
 
@@ -395,16 +413,22 @@ const updateCompany = async (req, res) => {
     // 3. x_UpdateCompany 호출
     const result = await executeStoredProcedureWithNamedParams('x_UpdateCompany', {
       CompanyId: parseInt(companyId),
+      CompanyCode: companyCode,
       CompanyName: companyName,
       CompanyNameEng: companyNameEng,
       BusinessNumber: businessNumber,
+      CorporateNumber: corporateNumber,
       CeoName: ceoName,
       EstablishDate: establishDate ? new Date(establishDate) : null,
+      PostalCode: postalCode,
       Address: address,
+      AddressDetail: addressDetail,
       PhoneNumber: phoneNumber,
+      FaxNumber: faxNumber,
       Email: email,
       Industry: industry,
-      IsActive: isActive !== undefined ? (isActive ? 1 : 0) : null,
+      BusinessType: businessType,
+      IsActive: isActive !== undefined ? (isActive ? 1 : 0) : null,  // boolean을 bit로 변환
       UpdatedBy: req.user?.userId || 1
     });
 

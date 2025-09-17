@@ -19,7 +19,7 @@ class ApiService {
       VITE_API_URL: import.meta.env.VITE_API_URL,
       모든_환경변수: import.meta.env
     });
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     console.log('🚀 사용할 API URL:', this.baseURL);
 
     // Axios 인스턴스 생성
