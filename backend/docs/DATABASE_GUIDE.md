@@ -146,7 +146,7 @@ module.exports = {
 --   2024-09-XX: 최초 생성
 -- =============================================
 
-CREATE PROCEDURE SP_FunctionName
+CREATE PROCEDURE x_FunctionName
     @Param1 NVARCHAR(100),           -- 파라미터1 설명
     @Param2 INT,                     -- 파라미터2 설명
     @Param3 DATETIME = NULL,         -- 파라미터3 설명 (선택적)
@@ -258,7 +258,7 @@ BEGIN
         SET @Message = '처리 중 오류가 발생했습니다: ' + ERROR_MESSAGE();
 
         -- 에러 로깅 (개발/디버깅용)
-        PRINT '=== SP_FunctionName 오류 발생 ===';
+        PRINT '=== x_FunctionName 오류 발생 ===';
         PRINT @ErrorMessage;
         PRINT 'Input Param1: ' + ISNULL(@Param1, 'NULL');
         PRINT 'Input Param2: ' + ISNULL(CAST(@Param2 AS NVARCHAR(10)), 'NULL');
@@ -278,7 +278,7 @@ END
 -- 설명: [조회 기능] 목록 조회 SP
 -- =============================================
 
-CREATE PROCEDURE SP_GetListWithPaging
+CREATE PROCEDURE x_GetListWithPaging
     @SearchKeyword NVARCHAR(100) = '',    -- 검색 키워드
     @PageNumber INT = 1,                  -- 페이지 번호
     @PageSize INT = 20,                   -- 페이지 크기
@@ -360,7 +360,7 @@ BEGIN
         SET @ResultCode = -1;
         SET @Message = '조회 중 오류가 발생했습니다: ' + ERROR_MESSAGE();
 
-        PRINT '=== SP_GetListWithPaging 오류 발생 ===';
+        PRINT '=== x_GetListWithPaging 오류 발생 ===';
         PRINT 'Error: ' + ERROR_MESSAGE();
         PRINT '=======================================';
     END CATCH
@@ -1006,7 +1006,7 @@ const createEmployee = async (employeeData, userId) => {
     { name: "UserId", type: SqlTypes.Int, value: userId },
   ];
 
-  const result = await executeStoredProcedure("SP_CreateEmployee", inputParams);
+  const result = await executeStoredProcedure("x_CreateEmployee", inputParams);
 
   return result;
 };

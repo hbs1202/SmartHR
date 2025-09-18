@@ -132,7 +132,7 @@ const MainLayout: React.FC = () => {
         },
         {
           key: '/organization/workplace',
-          label: '사업장 등록',
+          label: '사업장 관리',
         },
         {
           key: '/organization/department',

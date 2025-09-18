@@ -58,7 +58,7 @@ router.post("/api/[엔드포인트]", authenticateToken, async (req, res) => {
 
     // 4. Stored Procedure 호출
     const spParams = [param1, param2, param3];
-    const result = await executeStoredProcedure("SP_FunctionName", spParams);
+    const result = await executeStoredProcedure("x_FunctionName", spParams);
 
     // 5. 결과 처리 및 응답
     if (result.ResultCode === 0) {

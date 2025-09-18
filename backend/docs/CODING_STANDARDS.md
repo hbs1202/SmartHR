@@ -98,8 +98,8 @@ CREATE TABLE Employees (
     LastName NVARCHAR(50) NOT NULL
 );
 
--- Stored Procedure: SP_ 접두사 + PascalCase
-CREATE PROCEDURE SP_CreateEmployee
+-- Stored Procedure: x_ 접두사 + PascalCase
+CREATE PROCEDURE x_CreateEmployee
     @EmployeeCode NVARCHAR(20),
     @FirstName NVARCHAR(50)
 -- SP 로직
@@ -176,7 +176,7 @@ const createEmployee = async (employeeData, userId) => {
       userId
     ];
 
-    const result = await executeStoredProcedure('SP_CreateEmployee', spParams);
+    const result = await executeStoredProcedure('x_CreateEmployee', spParams);
 
     // 4. 결과 처리
     if (result.ResultCode === 0) {
@@ -230,7 +230,7 @@ const employeeData = {
 
 // 긴 함수 호출은 파라미터를 새 줄에
 const result = await executeStoredProcedure(
-  'SP_CreateEmployee',
+  'x_CreateEmployee',
   employeeParams,
   outputParams
 );
@@ -278,7 +278,7 @@ const createEmployee = async (employeeData, userId) => {
   // FIXME: 비밀번호 암호화 로직 검토 필요
   
   // 직원 생성 SP 호출
-  const result = await executeStoredProcedure('SP_CreateEmployee', spParams);
+  const result = await executeStoredProcedure('x_CreateEmployee', spParams);
   
   return result;
 };

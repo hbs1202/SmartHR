@@ -548,11 +548,17 @@ const createSubCompany = async (req, res) => {
       companyId,
       subCompanyCode,
       subCompanyName,
+      businessNumber,
+      ceoName,
+      industry,
+      businessType,
       subCompanyType,
       address,
+      addressDetail,
       postalCode,
       phoneNumber,
       faxNumber,
+      email,
       managerEmployeeId,
       openDate,
       area,
@@ -584,11 +590,17 @@ const createSubCompany = async (req, res) => {
       CompanyId: parseInt(companyId),
       SubCompanyCode: subCompanyCode,
       SubCompanyName: subCompanyName,
+      BusinessNumber: businessNumber,
+      CeoName: ceoName,
+      Industry: industry,
+      BusinessType: businessType,
       SubCompanyType: subCompanyType || '일반사업장',
       Address: address,
+      AddressDetail: addressDetail,
       PostalCode: postalCode,
       PhoneNumber: phoneNumber,
       FaxNumber: faxNumber,
+      Email: email,
       ManagerEmployeeId: managerEmployeeId ? parseInt(managerEmployeeId) : null,
       OpenDate: openDate ? new Date(openDate) : null,
       Area: area ? parseFloat(area) : null,
@@ -792,11 +804,17 @@ const updateSubCompany = async (req, res) => {
     const { id: subCompanyId } = req.params;
     const {
       subCompanyName,
+      businessNumber,
+      ceoName,
+      industry,
+      businessType,
       subCompanyType,
       address,
+      addressDetail,
       postalCode,
       phoneNumber,
       faxNumber,
+      email,
       managerEmployeeId,
       openDate,
       area,
@@ -835,11 +853,17 @@ const updateSubCompany = async (req, res) => {
     const result = await executeStoredProcedureWithNamedParams('x_UpdateSubCompany', {
       SubCompanyId: parseInt(subCompanyId),
       SubCompanyName: subCompanyName,
+      BusinessNumber: businessNumber,
+      CeoName: ceoName,
+      Industry: industry,
+      BusinessType: businessType,
       SubCompanyType: subCompanyType,
       Address: address,
+      AddressDetail: addressDetail,
       PostalCode: postalCode,
       PhoneNumber: phoneNumber,
       FaxNumber: faxNumber,
+      Email: email,
       ManagerEmployeeId: managerEmployeeId ? parseInt(managerEmployeeId) : null,
       OpenDate: openDate ? new Date(openDate) : null,
       Area: area ? parseFloat(area) : null,
@@ -962,24 +986,13 @@ const deleteSubCompany = async (req, res) => {
  */
 const createDepartment = async (req, res) => {
   try {
-    // 1. 요청 데이터 추출 및 검증
+    // 1. 요청 데이터 추출 및 검증 (간단한 5개 필드)
     const {
       subCompanyId,
       deptCode,
       deptName,
-      deptNameEng,
       parentDeptId,
-      deptType,
-      managerEmployeeId,
-      viceManagerEmployeeId,
-      costCenter,
-      budget,
-      phoneNumber,
-      extension,
-      email,
-      location,
-      establishDate,
-      purpose
+      establishDate
     } = req.body;
 
     // 2. 필수 파라미터 검증
@@ -999,24 +1012,13 @@ const createDepartment = async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    // 3. x_CreateDepartment 호출
+    // 3. x_CreateDepartment 호출 (간단한 5개 필드)
     const result = await executeStoredProcedureWithNamedParams('x_CreateDepartment', {
       SubCompanyId: parseInt(subCompanyId),
       DeptCode: deptCode,
       DeptName: deptName,
-      DeptNameEng: deptNameEng,
       ParentDeptId: parentDeptId ? parseInt(parentDeptId) : null,
-      DeptType: deptType || '일반부서',
-      ManagerEmployeeId: managerEmployeeId ? parseInt(managerEmployeeId) : null,
-      ViceManagerEmployeeId: viceManagerEmployeeId ? parseInt(viceManagerEmployeeId) : null,
-      CostCenter: costCenter,
-      Budget: budget ? parseFloat(budget) : null,
-      PhoneNumber: phoneNumber,
-      Extension: extension,
-      Email: email,
-      Location: location,
       EstablishDate: establishDate ? new Date(establishDate) : null,
-      Purpose: purpose,
       CreatedBy: req.user?.userId || 1
     });
 
@@ -1065,18 +1067,19 @@ const createDepartment = async (req, res) => {
 const getDepartments = async (req, res) => {
   try {
     // 1. 쿼리 파라미터 추출
-    const { 
-      subCompanyId = null, 
+    const {
+      companyId = null,
+      subCompanyId = null,
       parentDeptId = null,
-      page = 1, 
-      limit = 20, 
-      isActive = null, 
-      search = null 
+      page = 1,
+      limit = 20,
+      isActive = null,
+      search = null
     } = req.query;
 
     console.log('부서 목록 조회 요청:', {
+      companyId: companyId ? parseInt(companyId) : null,
       subCompanyId: subCompanyId ? parseInt(subCompanyId) : null,
-      parentDeptId: parentDeptId ? parseInt(parentDeptId) : null,
       page: parseInt(page),
       limit: parseInt(limit),
       isActive: isActive,
@@ -1086,8 +1089,8 @@ const getDepartments = async (req, res) => {
 
     // 2. x_GetDepartments 호출
     const result = await executeStoredProcedureWithNamedParams('x_GetDepartments', {
+      CompanyId: companyId ? parseInt(companyId) : null,
       SubCompanyId: subCompanyId ? parseInt(subCompanyId) : null,
-      ParentDeptId: parentDeptId ? parseInt(parentDeptId) : null,
       PageNumber: parseInt(page),
       PageSize: parseInt(limit),
       IsActive: isActive !== null ? (isActive === 'true' ? 1 : 0) : null,
@@ -1096,6 +1099,13 @@ const getDepartments = async (req, res) => {
 
     // 3. 결과 처리
     if (result.ResultCode === 0) {
+      console.log('📊 부서 조회 결과:', {
+        resultCode: result.ResultCode,
+        dataLength: result.data?.length || 0,
+        firstItem: result.data?.[0],
+        totalCount: result.data?.[0]?.TotalCount || 0
+      });
+
       res.json({
         success: true,
         data: {

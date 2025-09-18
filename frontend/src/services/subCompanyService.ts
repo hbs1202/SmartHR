@@ -9,49 +9,64 @@ import api from './api';
 import type { ApiResponse } from '../types/api';
 
 // 사업장 등록 요청 타입
-export interface WorkplaceCreateRequest {
+export interface SubCompanyCreateRequest {
   companyId: number;
-  workplaceCode: string;
-  workplaceName: string;
+  subCompanyCode: string;
+  subCompanyName: string;
   businessNumber?: string;
-  representativeName?: string;
-  establishDate?: string;
+  ceoName?: string;
   industry?: string;
   businessType?: string;
-  postalCode?: string;
+  subCompanyType?: string;
   address?: string;
   addressDetail?: string;
+  postalCode?: string;
   phoneNumber?: string;
   faxNumber?: string;
   email?: string;
-  isActive?: boolean;
+  managerEmployeeId?: number;
+  openDate?: string;
+  area?: number;
+  floorCount?: number;
+  parkingSpots?: number;
+  description?: string;
+  isHeadquarters?: boolean;
 }
 
 // 사업장 정보 타입 (API 응답 구조에 맞게 PascalCase 사용)
-export interface Workplace {
-  WorkplaceId: number;
+export interface SubCompany {
+  SubCompanyId: number;
   CompanyId: number;
-  WorkplaceCode: string;
-  WorkplaceName: string;
+  SubCompanyCode: string;
+  SubCompanyName: string;
   BusinessNumber?: string;
-  RepresentativeName?: string;
-  EstablishDate?: string;
+  CeoName?: string;
   Industry?: string;
   BusinessType?: string;
-  PostalCode?: string;
+  SubCompanyType?: string;
   Address?: string;
   AddressDetail?: string;
+  PostalCode?: string;
   PhoneNumber?: string;
   FaxNumber?: string;
   Email?: string;
+  ManagerEmployeeId?: number;
+  OpenDate?: string;
+  Area?: number;
+  FloorCount?: number;
+  ParkingSpots?: number;
+  Description?: string;
+  IsHeadquarters: boolean;
   IsActive: boolean;
   CreatedAt: string;
   UpdatedAt?: string;
+  CompanyName?: string;
+  CompanyCode?: string;
 }
 
 // 사업장 목록 응답 타입
-export interface WorkplaceListResponse {
-  workplaces: Workplace[];
+export interface SubCompanyListResponse {
+  subCompanies: SubCompany[];
   pagination: {
     currentPage: number;
     pageSize: number;
@@ -61,14 +76,14 @@ export interface WorkplaceListResponse {
 }
 
 // 사업장 등록 응답 타입
-export interface WorkplaceCreateResponse {
-  workplaceId: number;
-  workplaceCode: string;
-  workplaceName: string;
+export interface SubCompanyCreateResponse {
+  subCompanyId: number;
+  subCompanyCode: string;
+  subCompanyName: string;
 }
 
 // 사업장 목록 조회 파라미터
-export interface WorkplaceListParams {
+export interface SubCompanyListParams {
   page?: number;
   limit?: number;
   isActive?: boolean;
@@ -80,11 +95,11 @@ export interface WorkplaceListParams {
  * @param data 사업장 등록 데이터
  * @returns 등록된 사업장 정보
  */
-export const createWorkplace = async (data: WorkplaceCreateRequest): Promise<ApiResponse<WorkplaceCreateResponse>> => {
+export const createWorkplace = async (data: SubCompanyCreateRequest): Promise<ApiResponse<SubCompanyCreateResponse>> => {
   try {
     console.log('사업장 등록 요청:', data);
 
-    const response = await api.post<ApiResponse<WorkplaceCreateResponse>>('/api/organization/workplaces', data);
+    const response = await api.post<ApiResponse<SubCompanyCreateResponse>>('/api/organization/subcompanies', data);
 
     console.log('사업장 등록 응답:', response.data);
     return response.data;
@@ -100,11 +115,13 @@ export const createWorkplace = async (data: WorkplaceCreateRequest): Promise<Api
  * @param params 조회 파라미터
  * @returns 사업장 목록 및 페이징 정보
  */
-export const getWorkplacesByCompany = async (companyId: number, params: WorkplaceListParams = {}): Promise<ApiResponse<WorkplaceListResponse>> => {
+export const getWorkplacesByCompany = async (companyId: number, params: SubCompanyListParams = {}): Promise<ApiResponse<SubCompanyListResponse>> => {
   try {
     console.log('사업장 목록 조회 요청:', { companyId, params });
 
-    const response = await api.get<ApiResponse<WorkplaceListResponse>>(`/api/organization/companies/${companyId}/workplaces`, { params });
+    // 백엔드 API는 쿼리 파라미터로 companyId를 받음
+    const queryParams = { ...params, companyId };
+    const response = await api.get<ApiResponse<SubCompanyListResponse>>('/api/organization/subcompanies', { params: queryParams });
 
     console.log('사업장 목록 조회 응답:', response.data);
     return response.data;
@@ -119,11 +136,11 @@ export const getWorkplacesByCompany = async (companyId: number, params: Workplac
  * @param workplaceId 사업장 ID
  * @returns 사업장 상세 정보
  */
-export const getWorkplaceById = async (workplaceId: number): Promise<ApiResponse<Workplace>> => {
+export const getWorkplaceById = async (workplaceId: number): Promise<ApiResponse<SubCompany>> => {
   try {
     console.log('사업장 상세 조회 요청:', workplaceId);
 
-    const response = await api.get<ApiResponse<Workplace>>(`/api/organization/workplaces/${workplaceId}`);
+    const response = await api.get<ApiResponse<SubCompany>>(`/api/organization/subcompanies/${workplaceId}`);
 
     console.log('사업장 상세 조회 응답:', response.data);
     return response.data;
@@ -141,12 +158,12 @@ export const getWorkplaceById = async (workplaceId: number): Promise<ApiResponse
  */
 export const updateWorkplace = async (
   workplaceId: number,
-  data: Partial<WorkplaceCreateRequest>
-): Promise<ApiResponse<Workplace>> => {
+  data: Partial<SubCompanyCreateRequest>
+): Promise<ApiResponse<SubCompany>> => {
   try {
     console.log('사업장 정보 수정 요청:', { workplaceId, data });
 
-    const response = await api.put<ApiResponse<Workplace>>(`/api/organization/workplaces/${workplaceId}`, data);
+    const response = await api.put<ApiResponse<SubCompany>>(`/api/organization/subcompanies/${workplaceId}`, data);
 
     console.log('사업장 정보 수정 응답:', response.data);
     return response.data;
@@ -165,7 +182,7 @@ export const deleteWorkplace = async (workplaceId: number): Promise<ApiResponse<
   try {
     console.log('사업장 삭제 요청:', workplaceId);
 
-    const response = await api.delete<ApiResponse<{ workplaceId: number; deletedAt: string }>>(`/api/organization/workplaces/${workplaceId}`);
+    const response = await api.delete<ApiResponse<{ workplaceId: number; deletedAt: string }>>(`/api/organization/subcompanies/${workplaceId}`);
 
     console.log('사업장 삭제 응답:', response.data);
     return response.data;
@@ -180,7 +197,7 @@ export const deleteWorkplace = async (workplaceId: number): Promise<ApiResponse<
  * @param data 검증할 사업장 데이터
  * @returns 검증 결과
  */
-export const validateWorkplaceForm = (data: WorkplaceCreateRequest): { isValid: boolean; errors: string[] } => {
+export const validateWorkplaceForm = (data: SubCompanyCreateRequest): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
   // 필수 필드 검증
@@ -188,23 +205,14 @@ export const validateWorkplaceForm = (data: WorkplaceCreateRequest): { isValid: 
     errors.push('회사를 선택해주세요.');
   }
 
-  if (!data.workplaceCode || data.workplaceCode.trim().length < 2) {
+  if (!data.subCompanyCode || data.subCompanyCode.trim().length < 2) {
     errors.push('사업장 코드는 최소 2자 이상 입력해주세요.');
   }
 
-  if (!data.workplaceName || data.workplaceName.trim().length < 2) {
+  if (!data.subCompanyName || data.subCompanyName.trim().length < 2) {
     errors.push('사업장명은 최소 2자 이상 입력해주세요.');
   }
 
-  // 사업자등록번호 형식 검증 (선택 입력 시)
-  if (data.businessNumber && !isValidBusinessNumber(data.businessNumber)) {
-    errors.push('사업자등록번호 형식이 올바르지 않습니다. (000-00-00000)');
-  }
-
-  // 이메일 형식 검증 (선택 입력 시)
-  if (data.email && !isValidEmail(data.email)) {
-    errors.push('이메일 형식이 올바르지 않습니다.');
-  }
 
   // 전화번호 형식 검증 (선택 입력 시)
   if (data.phoneNumber && !isValidPhoneNumber(data.phoneNumber)) {

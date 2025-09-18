@@ -39,7 +39,6 @@ import {
   CloseOutlined,
   HomeOutlined,
   TeamOutlined,
-  BuildOutlined,
   BankOutlined,
 } from '@ant-design/icons';
 import {
@@ -52,25 +51,26 @@ import {
   createWorkplace,
   updateWorkplace,
   validateWorkplaceForm,
-  formatBusinessNumber,
   formatPhoneNumber,
-  type Workplace,
-  type WorkplaceListParams,
-  type WorkplaceCreateRequest,
-} from '../services/workplaceService';
+  formatBusinessNumber,
+  type SubCompany,
+  type SubCompanyListParams,
+  type SubCompanyCreateRequest,
+} from '../services/subCompanyService';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-const WorkplaceList: React.FC = () => {
+const SubCompanyList: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | undefined>(undefined);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [workplaces, setWorkplaces] = useState<Workplace[]>([]);
+  const [subCompanies, setSubCompanies] = useState<SubCompany[]>([]);
   const [loading, setLoading] = useState(false);
   const [companyLoading, setCompanyLoading] = useState(false);
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
 
   // 모달 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,7 +79,7 @@ const WorkplaceList: React.FC = () => {
 
   // 편집 모드 상태
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingWorkplace, setEditingWorkplace] = useState<Workplace | null>(null);
+  const [editingSubCompany, setEditingSubCompany] = useState<SubCompany | null>(null);
 
   const [pagination, setPagination] = useState({
     current: 1,
@@ -88,7 +88,7 @@ const WorkplaceList: React.FC = () => {
   });
 
   // 검색 필터 상태
-  const [filters, setFilters] = useState<WorkplaceListParams>({
+  const [filters, setFilters] = useState<SubCompanyListParams>({
     page: 1,
     limit: 10,
     isActive: true,
@@ -123,7 +123,7 @@ const WorkplaceList: React.FC = () => {
   /**
    * 사업장 목록 조회
    */
-  const fetchWorkplaces = useCallback(async (companyId: number, params: WorkplaceListParams = filters) => {
+  const fetchSubCompanies = useCallback(async (companyId: number, params: SubCompanyListParams = filters) => {
     try {
       setLoading(true);
 
@@ -131,11 +131,11 @@ const WorkplaceList: React.FC = () => {
 
       console.log('사업장 API 전체 응답:', response);
 
-      // response에 직접 workplaces와 pagination이 있는 경우 처리
-      if (response && 'workplaces' in response) {
-        const directResponse = response as unknown as { workplaces: Workplace[]; pagination: { currentPage: number; pageSize: number; totalCount: number } };
-        console.log('workplaces 데이터:', directResponse.workplaces);
-        setWorkplaces(directResponse.workplaces);
+      // response에 직접 subCompanies와 pagination이 있는 경우 처리
+      if (response && 'subCompanies' in response) {
+        const directResponse = response as unknown as { subCompanies: SubCompany[]; pagination: { currentPage: number; pageSize: number; totalCount: number } };
+        console.log('subCompanies 데이터:', directResponse.subCompanies);
+        setSubCompanies(directResponse.subCompanies);
         setPagination({
           current: directResponse.pagination.currentPage,
           pageSize: directResponse.pagination.pageSize,
@@ -143,9 +143,9 @@ const WorkplaceList: React.FC = () => {
         });
       } else if (response && response.success && response.data) {
         // 기존 구조 지원
-        const data = response.data as { workplaces: Workplace[]; pagination: { currentPage: number; pageSize: number; totalCount: number } };
-        console.log('workplaces 데이터:', data.workplaces);
-        setWorkplaces(data.workplaces);
+        const data = response.data as { subCompanies: SubCompany[]; pagination: { currentPage: number; pageSize: number; totalCount: number } };
+        console.log('subCompanies 데이터:', data.subCompanies);
+        setSubCompanies(data.subCompanies);
         setPagination({
           current: data.pagination.currentPage,
           pageSize: data.pagination.pageSize,
@@ -166,6 +166,18 @@ const WorkplaceList: React.FC = () => {
   }, [filters]);
 
   /**
+   * 윈도우 리사이즈 감지
+   */
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  /**
    * 컴포넌트 마운트 시 회사 목록 로드
    */
   useEffect(() => {
@@ -177,11 +189,11 @@ const WorkplaceList: React.FC = () => {
    */
   useEffect(() => {
     if (selectedCompanyId) {
-      fetchWorkplaces(selectedCompanyId);
+      fetchSubCompanies(selectedCompanyId);
     } else {
-      setWorkplaces([]);
+      setSubCompanies([]);
     }
-  }, [selectedCompanyId, fetchWorkplaces]);
+  }, [selectedCompanyId, fetchSubCompanies]);
 
   /**
    * 컴포넌트 언마운트 시 body 클래스 정리
@@ -221,7 +233,7 @@ const WorkplaceList: React.FC = () => {
     };
     setFilters(newFilters);
     if (selectedCompanyId) {
-      fetchWorkplaces(selectedCompanyId, newFilters);
+      fetchSubCompanies(selectedCompanyId, newFilters);
     }
   };
 
@@ -236,7 +248,7 @@ const WorkplaceList: React.FC = () => {
     };
     setFilters(newFilters);
     if (selectedCompanyId) {
-      fetchWorkplaces(selectedCompanyId, newFilters);
+      fetchSubCompanies(selectedCompanyId, newFilters);
     }
   };
 
@@ -251,7 +263,7 @@ const WorkplaceList: React.FC = () => {
     };
     setFilters(newFilters);
     if (selectedCompanyId) {
-      fetchWorkplaces(selectedCompanyId, newFilters);
+      fetchSubCompanies(selectedCompanyId, newFilters);
     }
   };
 
@@ -260,7 +272,7 @@ const WorkplaceList: React.FC = () => {
    */
   const handleRefresh = () => {
     if (selectedCompanyId) {
-      fetchWorkplaces(selectedCompanyId, filters);
+      fetchSubCompanies(selectedCompanyId, filters);
     }
   };
 
@@ -286,7 +298,7 @@ const WorkplaceList: React.FC = () => {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setIsEditMode(false);
-    setEditingWorkplace(null);
+    setEditingSubCompany(null);
     form.resetFields();
     // 모달 닫힐 때 body 스크롤 복원
     document.body.classList.remove('modal-open');
@@ -295,7 +307,7 @@ const WorkplaceList: React.FC = () => {
   /**
    * 사업장 등록/수정 처리
    */
-  const handleModalSubmit = async (values: WorkplaceCreateRequest) => {
+  const handleModalSubmit = async (values: SubCompanyCreateRequest) => {
     try {
       setModalLoading(true);
 
@@ -308,14 +320,20 @@ const WorkplaceList: React.FC = () => {
         return;
       }
 
+      // 날짜 변환 처리 (시간대 문제 해결)
+      const processedValues = {
+        ...values,
+        openDate: values.openDate ? values.openDate.format('YYYY-MM-DD') : null
+      };
+
       let response;
 
-      if (isEditMode && editingWorkplace) {
+      if (isEditMode && editingSubCompany) {
         // 사업장 수정 API 호출
-        response = await updateWorkplace(editingWorkplace.WorkplaceId, values);
+        response = await updateWorkplace(editingSubCompany.SubCompanyId, processedValues);
       } else {
         // 사업장 등록 API 호출
-        response = await createWorkplace(values);
+        response = await createWorkplace(processedValues);
       }
 
       console.log('API 응답 전체:', response);
@@ -332,7 +350,7 @@ const WorkplaceList: React.FC = () => {
         handleModalClose();
         // 목록 새로고침
         if (selectedCompanyId) {
-          fetchWorkplaces(selectedCompanyId, filters);
+          fetchSubCompanies(selectedCompanyId, filters);
         }
       } else {
         console.log('실패 처리됨 - response.success:', response?.success);
@@ -433,26 +451,33 @@ const WorkplaceList: React.FC = () => {
   /**
    * 사업장 수정
    */
-  const handleEdit = (workplace: Workplace) => {
+  const handleEdit = (subCompany: SubCompany) => {
     setIsEditMode(true);
-    setEditingWorkplace(workplace);
+    setEditingSubCompany(subCompany);
 
     // 폼에 기존 데이터 설정 (camelCase로 변환)
     form.setFieldsValue({
-      companyId: workplace.CompanyId,
-      workplaceCode: workplace.WorkplaceCode,
-      workplaceName: workplace.WorkplaceName,
-      businessNumber: workplace.BusinessNumber,
-      representativeName: workplace.RepresentativeName,
-      establishDate: workplace.EstablishDate ? dayjs(workplace.EstablishDate) : null,
-      industry: workplace.Industry,
-      businessType: workplace.BusinessType,
-      postalCode: workplace.PostalCode,
-      address: workplace.Address,
-      addressDetail: workplace.AddressDetail,
-      phoneNumber: workplace.PhoneNumber,
-      faxNumber: workplace.FaxNumber,
-      email: workplace.Email,
+      companyId: subCompany.CompanyId,
+      subCompanyCode: subCompany.SubCompanyCode,
+      subCompanyName: subCompany.SubCompanyName,
+      businessNumber: subCompany.BusinessNumber,
+      ceoName: subCompany.CeoName,
+      industry: subCompany.Industry,
+      businessType: subCompany.BusinessType,
+      subCompanyType: subCompany.SubCompanyType,
+      address: subCompany.Address,
+      addressDetail: subCompany.AddressDetail,
+      postalCode: subCompany.PostalCode,
+      phoneNumber: subCompany.PhoneNumber,
+      faxNumber: subCompany.FaxNumber,
+      email: subCompany.Email,
+      managerEmployeeId: subCompany.ManagerEmployeeId,
+      openDate: subCompany.OpenDate ? dayjs(subCompany.OpenDate) : null,
+      area: subCompany.Area,
+      floorCount: subCompany.FloorCount,
+      parkingSpots: subCompany.ParkingSpots,
+      description: subCompany.Description,
+      isHeadquarters: subCompany.IsHeadquarters,
     });
 
     setIsModalOpen(true);
@@ -461,18 +486,18 @@ const WorkplaceList: React.FC = () => {
   /**
    * 사업장 삭제
    */
-  const handleDelete = async (workplace: Workplace) => {
+  const handleDelete = async (subCompany: SubCompany) => {
     try {
-      const response = await deleteWorkplace(workplace.WorkplaceId);
+      const response = await deleteWorkplace(subCompany.SubCompanyId);
 
       console.log('삭제 API 응답:', response);
 
       // 유연한 성공 조건 처리 (회사 등록과 동일한 패턴)
       if (response && (response.success === true || String(response.success) === 'true' || !('success' in response))) {
-        message.success(`${workplace.WorkplaceName}이(가) 성공적으로 삭제되었습니다.`);
+        message.success(`${subCompany.SubCompanyName}이(가) 성공적으로 삭제되었습니다.`);
         // 목록 새로고침
         if (selectedCompanyId) {
-          fetchWorkplaces(selectedCompanyId, filters);
+          fetchSubCompanies(selectedCompanyId, filters);
         }
       } else {
         console.log('삭제 실패 처리됨 - response.success:', response?.success);
@@ -489,40 +514,40 @@ const WorkplaceList: React.FC = () => {
   /**
    * 테이블 컬럼 정의
    */
-  const columns: ColumnsType<Workplace> = [
+  const columns: ColumnsType<SubCompany> = [
     {
       title: '사업장 코드',
-      dataIndex: 'WorkplaceCode',
-      key: 'WorkplaceCode',
+      dataIndex: 'SubCompanyCode',
+      key: 'SubCompanyCode',
       width: 120,
       render: (code: string) => <Text strong>{code}</Text>,
     },
     {
       title: '사업장명',
-      dataIndex: 'WorkplaceName',
-      key: 'WorkplaceName',
+      dataIndex: 'SubCompanyName',
+      key: 'SubCompanyName',
       render: (name: string) => <Text strong>{name}</Text>,
     },
     {
-      title: '대표자명',
-      dataIndex: 'RepresentativeName',
-      key: 'RepresentativeName',
+      title: '사업장 유형',
+      dataIndex: 'SubCompanyType',
+      key: 'SubCompanyType',
       width: 120,
-      render: (name: string) => name || '-',
+      render: (type: string) => type || '-',
     },
     {
-      title: '사업자등록번호',
-      dataIndex: 'BusinessNumber',
-      key: 'BusinessNumber',
-      width: 140,
-      render: (number: string) => number || '-',
+      title: '주소',
+      dataIndex: 'Address',
+      key: 'Address',
+      width: 200,
+      render: (address: string) => address || '-',
     },
     {
-      title: '업종',
-      dataIndex: 'Industry',
-      key: 'Industry',
+      title: '매니저 ID',
+      dataIndex: 'ManagerEmployeeId',
+      key: 'ManagerEmployeeId',
       width: 120,
-      render: (industry: string) => industry || '-',
+      render: (id: number) => id || '-',
     },
     {
       title: '전화번호',
@@ -555,7 +580,7 @@ const WorkplaceList: React.FC = () => {
       key: 'actions',
       width: 100,
       align: 'center',
-      render: (_, record: Workplace) => (
+      render: (_, record: SubCompany) => (
         <Space size="small">
           <Tooltip title="수정">
             <Button
@@ -568,7 +593,7 @@ const WorkplaceList: React.FC = () => {
           <Tooltip title="삭제">
             <Popconfirm
               title="사업장 삭제"
-              description={`'${record.WorkplaceName}'을(를) 정말 삭제하시겠습니까?`}
+              description={`'${record.SubCompanyName}'을(를) 정말 삭제하시겠습니까?`}
               onConfirm={() => handleDelete(record)}
               okText="삭제"
               cancelText="취소"
@@ -588,7 +613,7 @@ const WorkplaceList: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '12px', width: '100%', maxWidth: '100%', height: 'calc(100vh - 64px)', overflow: 'hidden', boxSizing: 'border-box' }}>
+    <div style={{ padding: '12px', width: '100%', maxWidth: '100%', height: `${windowHeight - 64}px`, overflow: 'auto', boxSizing: 'border-box' }}>
       {/* 경로 표시 (Breadcrumb) */}
       <Breadcrumb
         style={{ marginBottom: '16px' }}
@@ -681,7 +706,22 @@ const WorkplaceList: React.FC = () => {
       `}</style>
 
       {/* 회사 선택 카드 */}
-      <Card style={{ marginBottom: '16px' }}>
+      <Card
+        style={{
+          marginBottom: '16px',
+          maxHeight: selectedCompanyId ? `${windowHeight - 160}px` : 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+        bodyStyle={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '24px',
+          overflow: 'hidden'
+        }}
+      >
         <div style={{
           backgroundColor: 'rgb(41, 57, 85)',
           color: 'white',
@@ -691,111 +731,72 @@ const WorkplaceList: React.FC = () => {
           borderBottom: '2px solid rgba(255, 255, 255, 0.3)',
         }}>
           <Title level={4} style={{ margin: 0, color: 'white', fontSize: '16px' }}>
-            🏢 회사 선택
+            🏭 사업장 관리
           </Title>
         </div>
 
-        <Row gutter={16} align="middle">
-          <Col xs={24} md={8}>
-            <Select
-              placeholder="사업장을 관리할 회사를 선택하세요"
-              style={{ width: '100%' }}
-              size="large"
-              loading={companyLoading}
-              value={selectedCompanyId}
-              onChange={handleCompanyChange}
-              showSearch
-              filterOption={(input, option) =>
-                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {companies.map(company => (
-                <Option key={company.CompanyId} value={company.CompanyId}>
-                  [{company.CompanyCode}] {company.CompanyName}
-                </Option>
-              ))}
-            </Select>
+        <Row gutter={24} align="middle" justify="space-between" style={{ marginBottom: '16px' }}>
+          <Col xs={24} sm={8} md={6} style={{ minWidth: '350px' }}>
+            <Space align="center" style={{ width: '100%' }}>
+              <Text strong style={{ fontSize: '14px', color: '#333', whiteSpace: 'nowrap' }}>회사선택:</Text>
+              <Select
+                placeholder="회사를 선택하세요"
+                style={{ width: '350px' }}
+                size="large"
+                loading={companyLoading}
+                value={selectedCompanyId}
+                onChange={handleCompanyChange}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                }
+              >
+                {companies.map(company => (
+                  <Option key={company.CompanyId} value={company.CompanyId}>
+                    [{company.CompanyCode}] {company.CompanyName}
+                  </Option>
+                ))}
+              </Select>
+            </Space>
           </Col>
 
-          {selectedCompany && (
-            <Col xs={24} md={16}>
-              <Alert
-                message={`선택된 회사: ${selectedCompany.CompanyName} (${selectedCompany.CompanyCode})`}
-                type="info"
-                showIcon
-                style={{ margin: '8px 0 0 0' }}
-              />
-            </Col>
-          )}
-        </Row>
-      </Card>
-
-      {/* 사업장 목록 카드 */}
-      <Card style={{
-        width: '100%',
-        maxWidth: '100%',
-        margin: '0 0 20px 0',
-        height: selectedCompanyId ? 'calc(100vh - 280px)' : 'calc(100vh - 220px)',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        {/* 헤더 */}
-        <div style={{
-          backgroundColor: 'rgb(41, 57, 85)',
-          color: 'white',
-          padding: '12px 20px 8px 20px',
-          margin: '-24px -24px 12px -24px',
-          borderRadius: '6px 6px 0 0',
-          borderBottom: '2px solid rgba(255, 255, 255, 0.3)',
-          flexShrink: 0
-        }}>
-          <Row justify="start" align="middle">
+          {selectedCompanyId && (
             <Col>
-              <Title level={3} style={{ margin: 0, color: 'white', fontSize: '20px' }}>
-                🏭 사업장 관리
-              </Title>
-            </Col>
-          </Row>
-        </div>
-
-        {selectedCompanyId ? (
-          <>
-            {/* 검색 및 필터 */}
-            <Row gutter={16} style={{ marginBottom: '16px', width: '100%', flexShrink: 0 }} justify="space-between" align="middle">
-              <Col xs={24} sm={12} md={8}>
-                <Search
-                  placeholder="사업장명, 사업장코드, 대표자명으로 검색"
-                  allowClear
-                  enterButton={<SearchOutlined />}
-                  size="large"
-                  onSearch={handleSearch}
-                />
-              </Col>
-              <Col xs={24} sm={6} md={4}>
-                <Select
-                  placeholder="상태"
-                  allowClear
-                  size="large"
-                  style={{ width: '100%' }}
-                  onChange={handleActiveFilterChange}
-                  value={filters.isActive}
-                >
-                  <Option value={true}>활성</Option>
-                  <Option value={false}>비활성</Option>
-                </Select>
-              </Col>
-              <Col xs={24} sm={6} md={4}>
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={handleRefresh}
-                  size="large"
-                >
-                  새로고침
-                </Button>
-              </Col>
-              <Col xs={24} sm={12} md={8}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Row gutter={16} align="middle">
+                <Col>
+                  <Search
+                    placeholder="사업장명, 사업장코드, 대표자명으로 검색"
+                    allowClear
+                    enterButton={<SearchOutlined />}
+                    size="large"
+                    onSearch={handleSearch}
+                    style={{ width: '400px' }}
+                  />
+                </Col>
+                <Col>
+                  <Select
+                    placeholder="상태"
+                    allowClear
+                    size="large"
+                    style={{ width: '140px' }}
+                    onChange={handleActiveFilterChange}
+                    value={filters.isActive}
+                  >
+                    <Option value={true}>활성</Option>
+                    <Option value={false}>비활성</Option>
+                  </Select>
+                </Col>
+                <Col>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={handleRefresh}
+                    size="large"
+                    style={{ width: '130px' }}
+                  >
+                    새로고침
+                  </Button>
+                </Col>
+                <Col>
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -804,65 +805,84 @@ const WorkplaceList: React.FC = () => {
                   >
                     사업장 등록
                   </Button>
-                </div>
-              </Col>
-            </Row>
+                </Col>
+              </Row>
+            </Col>
+          )}
+        </Row>
 
-            {/* 테이블 영역 */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <Table
-                columns={columns}
-                dataSource={workplaces}
-                rowKey="WorkplaceId"
-                loading={loading}
-                pagination={false}
-                size="small"
-                scroll={{ x: 'max-content', y: 'calc(100vh - 500px)' }}
-                style={{
-                  backgroundColor: 'rgb(41, 57, 85)',
-                  color: 'white',
-                  width: '100%',
-                  flex: 1
-                }}
-                className="custom-dark-table"
-              />
 
-              {/* 페이지네이션 - Card 내부 하단 */}
-              <div style={{
-                marginTop: '16px',
-                padding: '16px 0',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                flexShrink: 0,
-                borderTop: '1px solid #f0f0f0'
-              }}>
-                <Pagination
-                  current={pagination.current}
-                  pageSize={pagination.pageSize}
-                  total={pagination.total}
-                  showSizeChanger={true}
-                  showQuickJumper={true}
-                  showTotal={(total, range) =>
-                    `${range[0]}-${range[1]} / 총 ${total}건`
-                  }
-                  onChange={handleTableChange}
-                  onShowSizeChange={handleTableChange}
-                  size="default"
-                />
-              </div>
-            </div>
-          </>
-        ) : (
+        {selectedCompanyId && (
           <div style={{
             display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            marginTop: '16px',
+            minHeight: subCompanies.length > 0 ? 'auto' : '300px'
+          }}>
+            {/* 테이블 영역 */}
+            <Table
+              columns={columns}
+              dataSource={subCompanies}
+              rowKey="SubCompanyId"
+              loading={loading}
+              pagination={false}
+              size="small"
+              scroll={{
+                x: 'max-content',
+                y: subCompanies.length > 0
+                  ? Math.min(subCompanies.length * 47 + 55, windowHeight - 520) // 47px per row + 55px header, much larger buffer for pagination
+                  : 200 // minimum height when no data
+              }}
+              style={{
+                backgroundColor: 'rgb(41, 57, 85)',
+                color: 'white',
+                width: '100%'
+              }}
+              className="custom-dark-table"
+            />
+
+            {/* 페이지네이션 - Card 내부 하단 */}
+            <div style={{
+              marginTop: '16px',
+              padding: '16px',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              flexShrink: 0,
+              borderTop: '1px solid #f0f0f0',
+              backgroundColor: '#fff',
+              minHeight: '60px',
+              alignItems: 'center'
+            }}>
+              <Pagination
+                current={pagination.current}
+                pageSize={pagination.pageSize}
+                total={pagination.total}
+                showSizeChanger={true}
+                showQuickJumper={true}
+                showTotal={(total, range) =>
+                  `${range[0]}-${range[1]} / 총 ${total}건`
+                }
+                onChange={handleTableChange}
+                onShowSizeChange={handleTableChange}
+                size="default"
+              />
+            </div>
+          </div>
+        )}
+        {!selectedCompanyId && (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px 0',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
-            alignItems: 'center',
-            height: '200px',
-            flexDirection: 'column'
+            alignItems: 'center'
           }}>
             <BankOutlined style={{ fontSize: '64px', color: '#d9d9d9', marginBottom: '16px' }} />
             <Text style={{ fontSize: '16px', color: '#999' }}>
-              사업장을 관리할 회사를 먼저 선택해주세요.
+              회사를 먼저 선택해주세요.
             </Text>
           </div>
         )}
@@ -926,34 +946,35 @@ const WorkplaceList: React.FC = () => {
             <Input type="hidden" />
           </Form.Item>
 
+          {/* 첫 번째 줄: 사업장코드, 사업장명, 사업자등록번호 */}
           <Row gutter={[16, 16]}>
-            <Col xs={24} md={6}>
+            <Col xs={24} md={8}>
               <Form.Item
                 label="사업장 코드"
-                name="workplaceCode"
+                name="subCompanyCode"
                 rules={[
                   { required: true, message: '사업장 코드를 입력해주세요.' },
                   { min: 2, message: '사업장 코드는 최소 2자 이상이어야 합니다.' },
                 ]}
               >
-                <Input placeholder="예: WP001" maxLength={20} />
+                <Input placeholder="예: SC001" maxLength={20} />
               </Form.Item>
             </Col>
 
-            <Col xs={24} md={9}>
+            <Col xs={24} md={8}>
               <Form.Item
                 label="사업장명"
-                name="workplaceName"
+                name="subCompanyName"
                 rules={[
                   { required: true, message: '사업장명을 입력해주세요.' },
                   { min: 2, message: '사업장명은 최소 2자 이상이어야 합니다.' },
                 ]}
               >
-                <Input placeholder="예: 본사 사업장" maxLength={100} />
+                <Input placeholder="예: 본사 사업장" maxLength={200} />
               </Form.Item>
             </Col>
 
-            <Col xs={24} md={9}>
+            <Col xs={24} md={8}>
               <Form.Item
                 label="사업자등록번호"
                 name="businessNumber"
@@ -965,7 +986,7 @@ const WorkplaceList: React.FC = () => {
                 ]}
               >
                 <Input
-                  placeholder="000-00-00000"
+                  placeholder="123-45-67890"
                   maxLength={12}
                   onChange={(e) => {
                     const formatted = formatBusinessNumber(e.target.value);
@@ -974,15 +995,27 @@ const WorkplaceList: React.FC = () => {
                 />
               </Form.Item>
             </Col>
+          </Row>
+
+          {/* 두 번째 줄: 사업장유형, 대표자, 설립일 */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={8}>
+              <Form.Item
+                label="사업장 유형"
+                name="subCompanyType"
+              >
+                <Input placeholder="예: 지점, 지사, 영업소" maxLength={100} />
+              </Form.Item>
+            </Col>
 
             <Col xs={24} md={8}>
-              <Form.Item label="대표자명" name="representativeName">
+              <Form.Item label="대표자명" name="ceoName">
                 <Input placeholder="홍길동" maxLength={50} />
               </Form.Item>
             </Col>
 
             <Col xs={24} md={8}>
-              <Form.Item label="설립일" name="establishDate">
+              <Form.Item label="설립일" name="openDate">
                 <DatePicker
                   style={{ width: '100%' }}
                   placeholder="설립일을 선택하세요"
@@ -990,15 +1023,16 @@ const WorkplaceList: React.FC = () => {
                 />
               </Form.Item>
             </Col>
+          </Row>
 
-            <Col xs={24} md={8}>
+          {/* 세 번째 줄: 업종, 업태 */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
               <Form.Item label="업종" name="industry">
                 <Input placeholder="예: IT서비스업" maxLength={50} />
               </Form.Item>
             </Col>
-          </Row>
 
-          <Row gutter={[16, 16]}>
             <Col xs={24} md={12}>
               <Form.Item label="업태" name="businessType">
                 <Input placeholder="예: 소프트웨어 개발" maxLength={100} />
@@ -1139,4 +1173,4 @@ const WorkplaceList: React.FC = () => {
   );
 };
 
-export default WorkplaceList;
+export default SubCompanyList;

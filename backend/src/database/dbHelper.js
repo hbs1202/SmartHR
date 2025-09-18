@@ -54,6 +54,10 @@ const executeStoredProcedureWithNamedParams = async (procedureName, inputParams 
     }
 
     request = pool.request();
+
+    // QUOTED_IDENTIFIER와 ANSI_NULLS를 명시적으로 ON으로 설정
+    await request.query('SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON; SET ANSI_PADDING ON;');
+
     console.log(`🔄 Stored Procedure 실행 중: ${procedureName}`);
     
     // Input 파라미터 추가
@@ -130,7 +134,10 @@ const executeStoredProcedure = async (procedureName, parameters = [], outputPara
     }
 
     request = pool.request();
-    
+
+    // QUOTED_IDENTIFIER와 ANSI_NULLS를 명시적으로 ON으로 설정
+    await request.query('SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON; SET ANSI_PADDING ON;');
+
     // Input 파라미터 추가
     parameters.forEach((param, index) => {
       const paramName = `param${index + 1}`;
