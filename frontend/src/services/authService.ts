@@ -9,7 +9,6 @@ import apiService from './api';
 import type {
   LoginRequest,
   LoginResponse,
-  RefreshTokenRequest,
   RefreshTokenResponse,
   User,
   ApiResponse
@@ -40,7 +39,7 @@ class AuthService {
       }
 
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ 로그인 실패:', error);
       throw error;
     }
@@ -61,7 +60,7 @@ class AuthService {
       console.log('✅ 로그아웃 완료');
 
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ 로그아웃 중 오류:', error);
 
       // 서버 요청 실패해도 로컬 데이터는 정리
@@ -95,7 +94,7 @@ class AuthService {
       }
 
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ 토큰 갱신 실패:', error);
 
       // 토큰 갱신 실패 시 로그아웃 처리
@@ -119,7 +118,7 @@ class AuthService {
       }
 
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ 사용자 정보 조회 실패:', error);
       throw error;
     }

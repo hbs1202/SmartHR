@@ -258,6 +258,55 @@ JWT 인증 생략 금지 (auth API 제외)
 에러 로깅 생략 금지
 입력값 검증 생략 금지
 SQL Injection 취약한 코드 작성 금지
+📁 부서 관리 API 구현 현황
+
+## 부서 관리 Stored Procedures (x_ 명명 규칙)
+- **x_GetDepartments**: 부서 목록 조회 (페이징, 검색, 필터링 지원)
+- **x_GetDepartmentById**: 부서 상세 조회
+- **x_CreateDepartment**: 부서 등록 (부서코드 중복 검증, 상위부서 검증 포함)
+- **x_UpdateDepartment**: 부서 수정 (간단 버전 - 5개 필드만 수정)
+- **x_DeleteDepartment**: 부서 삭제 (소프트 삭제 방식)
+
+## 부서 관리 API 엔드포인트
+```javascript
+// 부서 목록 조회 (GET /api/organization/departments)
+// 파라미터: companyId, subCompanyId, page, limit, isActive, search
+// 응답: {departments: Array, pagination: Object}
+
+// 부서 상세 조회 (GET /api/organization/departments/:id)
+// 응답: Department 객체
+
+// 부서 등록 (POST /api/organization/departments)
+// 요청: {subCompanyId, deptCode, deptName, parentDeptId?, establishDate?}
+// 응답: 생성된 Department 객체
+
+// 부서 수정 (PUT /api/organization/departments/:id)
+// 요청: {deptCode, deptName, parentDeptId?, establishDate?}
+// 응답: 수정된 Department 객체
+
+// 부서 삭제 (DELETE /api/organization/departments/:id)
+// 응답: 성공 메시지
+```
+
+## 부서 관리 컨트롤러 특징
+- **organization-controller.js**: 통합 조직 관리 컨트롤러
+- **executeStoredProcedureWithNamedParams**: 명명된 파라미터를 사용한 SP 호출
+- **QUOTED_IDENTIFIER ON**: SQL Server 호환성 설정
+- **JWT 인증**: 모든 API에 인증 미들웨어 적용
+- **한국어 오류 메시지**: 모든 에러 메시지 한국어 처리
+- **로깅**: 요청/응답/에러 로깅 포함
+
+## 테이블 구조
+```sql
+-- uDeptTb (부서 테이블)
+DeptId (PK), SubCompanyId (FK), CompanyId (FK),
+DeptCode, DeptName, ParentDeptId, DeptLevel, DeptType,
+ManagerEmployeeId, ViceManagerEmployeeId, CostCenter, Budget,
+EmployeeCount, PhoneNumber, Extension, Email, Location,
+EstablishDate, CloseDate, Purpose, IsActive,
+CreatedAt, UpdatedAt, CreatedBy, UpdatedBy
+```
+
 💬 Claude Code 소통 방식
 작업 완료 시 반드시 포함할 내용
 구현된 기능 설명 (한국어)

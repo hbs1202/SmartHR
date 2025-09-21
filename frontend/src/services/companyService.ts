@@ -84,11 +84,11 @@ export const createCompany = async (data: CompanyCreateRequest): Promise<ApiResp
   try {
     console.log('회사 등록 요청:', data);
 
-    const response = await api.post<ApiResponse<CompanyCreateResponse>>('/api/organization/companies', data);
+    const response = await api.post('/api/organization/companies', data);
 
-    console.log('회사 등록 응답:', response.data);
-    return response.data;
-  } catch (error: any) {
+    console.log('회사 등록 응답:', response);
+    return response as ApiResponse<CompanyCreateResponse>;
+  } catch (error: unknown) {
     console.error('회사 등록 오류:', error);
     throw error;
   }
@@ -103,11 +103,11 @@ export const getCompanies = async (params: CompanyListParams = {}): Promise<ApiR
   try {
     console.log('회사 목록 조회 요청:', params);
 
-    const response = await api.get<ApiResponse<CompanyListResponse>>('/api/organization/companies', { params });
+    const response = await api.get('/api/organization/companies', { params });
 
-    console.log('회사 목록 조회 응답:', response.data);
-    return response.data;
-  } catch (error: any) {
+    console.log('회사 목록 조회 응답:', response);
+    return response as ApiResponse<CompanyListResponse>;
+  } catch (error: unknown) {
     console.error('회사 목록 조회 오류:', error);
     throw error;
   }
@@ -122,11 +122,11 @@ export const getCompanyById = async (companyId: number): Promise<ApiResponse<Com
   try {
     console.log('회사 상세 조회 요청:', companyId);
 
-    const response = await api.get<ApiResponse<Company>>(`/api/organization/companies/${companyId}`);
+    const response = await api.get(`/api/organization/companies/${companyId}`);
 
-    console.log('회사 상세 조회 응답:', response.data);
-    return response.data;
-  } catch (error: any) {
+    console.log('회사 상세 조회 응답:', response);
+    return response as ApiResponse<Company>;
+  } catch (error: unknown) {
     console.error('회사 상세 조회 오류:', error);
     throw error;
   }
@@ -145,11 +145,11 @@ export const updateCompany = async (
   try {
     console.log('회사 정보 수정 요청:', { companyId, data });
 
-    const response = await api.put<ApiResponse<Company>>(`/api/organization/companies/${companyId}`, data);
+    const response = await api.put(`/api/organization/companies/${companyId}`, data);
 
-    console.log('회사 정보 수정 응답:', response.data);
-    return response.data;
-  } catch (error: any) {
+    console.log('회사 정보 수정 응답:', response);
+    return response as ApiResponse<Company>;
+  } catch (error: unknown) {
     console.error('회사 정보 수정 오류:', error);
     throw error;
   }
@@ -164,11 +164,11 @@ export const deleteCompany = async (companyId: number): Promise<ApiResponse<{ co
   try {
     console.log('회사 삭제 요청:', companyId);
 
-    const response = await api.delete<ApiResponse<{ companyId: number; deletedAt: string }>>(`/api/organization/companies/${companyId}`);
+    const response = await api.delete(`/api/organization/companies/${companyId}`);
 
-    console.log('회사 삭제 응답:', response.data);
-    return response.data;
-  } catch (error: any) {
+    console.log('회사 삭제 응답:', response);
+    return response as ApiResponse<{ companyId: number; deletedAt: string }>;
+  } catch (error: unknown) {
     console.error('회사 삭제 오류:', error);
     throw error;
   }

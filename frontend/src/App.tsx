@@ -21,6 +21,8 @@ import CompanyList from './pages/CompanyList';
 import CompanyRegister from './pages/CompanyRegister';
 import SubCompanyList from './pages/SubCompanyList';
 import DepartmentList from './pages/DepartmentList';
+import EmployeeList from './pages/EmployeeList';
+import OrganizationChart from './pages/OrganizationChart';
 
 function App() {
   return (
@@ -43,7 +45,7 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
 
             {/* 직원 관리 */}
-            <Route path="employees" element={<div>직원 관리 페이지 (개발 예정)</div>} />
+            <Route path="employees" element={<EmployeeList />} />
             <Route path="employees/:id" element={<div>직원 상세 페이지 (개발 예정)</div>} />
 
             {/* 조직 관리 */}
@@ -52,6 +54,7 @@ function App() {
             <Route path="organization/company/register" element={<CompanyRegister />} />
             <Route path="organization/workplace" element={<SubCompanyList />} />
             <Route path="organization/department" element={<DepartmentList />} />
+            <Route path="organization/chart" element={<OrganizationChart />} />
 
             {/* 발령 관리 */}
             <Route path="assignments" element={<div>발령 관리 페이지 (개발 예정)</div>} />

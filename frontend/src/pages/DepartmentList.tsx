@@ -18,10 +18,9 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { departmentService, type Department, type DepartmentCreateRequest } from '../services/departmentService';
-import { getCompanies, type Company, type CompanyListResponse } from '../services/companyService';
-import { getWorkplacesByCompany, type SubCompany, type SubCompanyListResponse } from '../services/subCompanyService';
-import type { ApiResponse } from '../types/api';
+import { departmentService, type Department, type DepartmentCreateRequest, type DepartmentUpdateRequest } from '../services/departmentService';
+import { getCompanies, type Company } from '../services/companyService';
+import { getWorkplacesByCompany, type SubCompany } from '../services/subCompanyService';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -31,7 +30,7 @@ interface DepartmentFormData {
   deptCode: string;
   deptName: string;
   parentDeptId?: number;
-  establishDate?: string;
+  establishDate?: dayjs.Dayjs;
 }
 
 const DepartmentList: React.FC = () => {
@@ -67,10 +66,14 @@ const DepartmentList: React.FC = () => {
       console.log('getCompanies 응답 전체 구조:', response);
       console.log('response.data 구조:', response.data);
 
-      // 안전한 데이터 접근 (실제 응답 구조에 맞게 수정)
-      const companies = (response as ApiResponse<CompanyListResponse> & CompanyListResponse)?.companies || [];
-      console.log('추출된 companies:', companies);
-      setCompanies(companies);
+      // 정상적인 데이터 접근
+      if (response.data && response.data.companies && Array.isArray(response.data.companies)) {
+        console.log('추출된 companies:', response.data.companies);
+        setCompanies(response.data.companies);
+      } else {
+        console.log('회사 데이터 없음:', response);
+        setCompanies([]);
+      }
     } catch (error) {
       console.error('회사 목록 로드 에러:', error);
       message.error('회사 목록을 불러오는데 실패했습니다.');
@@ -85,10 +88,14 @@ const DepartmentList: React.FC = () => {
       console.log('getWorkplacesByCompany 응답 전체 구조:', response);
       console.log('response.data 구조:', response.data);
 
-      // 안전한 데이터 접근 (실제 응답 구조에 맞게 수정)
-      const subCompanies = (response as ApiResponse<SubCompanyListResponse> & SubCompanyListResponse)?.subCompanies || [];
-      console.log('추출된 subCompanies:', subCompanies);
-      setSubCompanies(subCompanies);
+      // 정상적인 데이터 접근
+      if (response.data && response.data.subCompanies && Array.isArray(response.data.subCompanies)) {
+        console.log('추출된 subCompanies:', response.data.subCompanies);
+        setSubCompanies(response.data.subCompanies);
+      } else {
+        console.log('사업장 데이터 없음:', response);
+        setSubCompanies([]);
+      }
     } catch (error) {
       console.error('사업장 목록 로드 에러:', error);
       message.error('사업장 목록을 불러오는데 실패했습니다.');
@@ -106,7 +113,7 @@ const DepartmentList: React.FC = () => {
         subCompanyId: selectedSubCompanyId,
         page: currentPage,
         limit: pageSize,
-        isActive: isActiveFilter
+        isActive: isActiveFilter ?? undefined
       });
 
       setDepartments(data.departments || []);
@@ -186,21 +193,26 @@ const DepartmentList: React.FC = () => {
   // 부서 등록/수정
   const handleSubmit = async (values: DepartmentFormData) => {
     try {
-      const submitData: DepartmentCreateRequest = {
-        subCompanyId: values.subCompanyId,
-        deptCode: values.deptCode,
-        deptName: values.deptName,
-        parentDeptId: values.parentDeptId || null,
-        establishDate: values.establishDate || null
-      };
-
       if (editingDept) {
         // 수정
-        await departmentService.updateDepartment(editingDept.DeptId, submitData);
+        const updateData: DepartmentUpdateRequest = {
+          deptCode: values.deptCode,
+          deptName: values.deptName,
+          parentDeptId: values.parentDeptId || null,
+          establishDate: values.establishDate ? values.establishDate.format('YYYY-MM-DD') : null
+        };
+        await departmentService.updateDepartment(editingDept.DeptId, updateData);
         message.success('부서가 성공적으로 수정되었습니다.');
       } else {
         // 등록
-        await departmentService.createDepartment(submitData);
+        const createData: DepartmentCreateRequest = {
+          subCompanyId: values.subCompanyId,
+          deptCode: values.deptCode,
+          deptName: values.deptName,
+          parentDeptId: values.parentDeptId || null,
+          establishDate: values.establishDate ? values.establishDate.format('YYYY-MM-DD') : null
+        };
+        await departmentService.createDepartment(createData);
         message.success('부서가 성공적으로 등록되었습니다.');
       }
 

@@ -138,6 +138,10 @@ const MainLayout: React.FC = () => {
           key: '/organization/department',
           label: '부서 등록',
         },
+        {
+          key: '/organization/chart',
+          label: '조직도',
+        },
       ],
     },
     {

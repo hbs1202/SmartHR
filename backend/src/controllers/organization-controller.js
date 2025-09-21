@@ -1225,7 +1225,10 @@ const updateDepartment = async (req, res) => {
     // 1. 경로 파라미터 및 요청 데이터 추출
     const { id: deptId } = req.params;
     const {
+      deptCode,
       deptName,
+      parentDeptId,
+      establishDate,
       deptNameEng,
       deptType,
       managerEmployeeId,
@@ -1236,7 +1239,6 @@ const updateDepartment = async (req, res) => {
       extension,
       email,
       location,
-      establishDate,
       closeDate,
       purpose,
       isActive
@@ -1261,29 +1263,22 @@ const updateDepartment = async (req, res) => {
 
     console.log('부서 정보 수정 요청:', {
       deptId: parseInt(deptId),
+      deptCode,
       deptName,
+      parentDeptId,
+      establishDate,
       requestUser: req.user?.userId,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      fullBody: req.body
     });
 
-    // 3. x_UpdateDepartment 호출
+    // 3. x_UpdateDepartment 호출 (필수 파라미터만 전달)
     const result = await executeStoredProcedureWithNamedParams('x_UpdateDepartment', {
       DeptId: parseInt(deptId),
+      DeptCode: deptCode,
       DeptName: deptName,
-      DeptNameEng: deptNameEng,
-      DeptType: deptType,
-      ManagerEmployeeId: managerEmployeeId ? parseInt(managerEmployeeId) : null,
-      ViceManagerEmployeeId: viceManagerEmployeeId ? parseInt(viceManagerEmployeeId) : null,
-      CostCenter: costCenter,
-      Budget: budget ? parseFloat(budget) : null,
-      PhoneNumber: phoneNumber,
-      Extension: extension,
-      Email: email,
-      Location: location,
+      ParentDeptId: parentDeptId ? parseInt(parentDeptId) : null,
       EstablishDate: establishDate ? new Date(establishDate) : null,
-      CloseDate: closeDate ? new Date(closeDate) : null,
-      Purpose: purpose,
-      IsActive: isActive !== undefined ? (isActive ? 1 : 0) : null,
       UpdatedBy: req.user?.userId || 1
     });
 
@@ -1293,7 +1288,10 @@ const updateDepartment = async (req, res) => {
         success: true,
         data: {
           deptId: parseInt(deptId),
-          deptName: deptName
+          deptCode: deptCode,
+          deptName: deptName,
+          parentDeptId: parentDeptId ? parseInt(parentDeptId) : null,
+          establishDate: establishDate
         },
         message: result.Message || '부서 정보가 성공적으로 수정되었습니다.'
       });
@@ -1873,6 +1871,295 @@ const deletePosition = async (req, res) => {
   }
 };
 
+/**
+ * 새로운 조직도 차트 조회 (계층구조 트리)
+ * @route GET /api/organization/chart
+ * @description 조직도를 계층구조 트리 형태로 반환
+ * @access Private (JWT 토큰 필요)
+ */
+const getOrganizationChart = async (req, res) => {
+  try {
+    // 1. 쿼리 파라미터 추출
+    const { companyId, subCompanyId, includeInactive = false } = req.query;
+
+    console.log('조직도 차트 조회 요청:', {
+      companyId: companyId || 'all',
+      subCompanyId: subCompanyId || 'all',
+      includeInactive: includeInactive === 'true',
+      requestUser: req.user?.userId
+    });
+
+    // 2. x_GetOrganizationChart 호출
+    const result = await executeStoredProcedureWithNamedParams('x_GetOrganizationChart', {
+      CompanyId: companyId ? parseInt(companyId) : null,
+      SubCompanyId: subCompanyId ? parseInt(subCompanyId) : null,
+      IncludeInactive: includeInactive === 'true' ? 1 : 0
+    });
+
+    // 3. 결과 처리
+    if (result.ResultCode === 0) {
+      // 플랫 데이터를 트리 구조로 변환
+      const treeData = buildOrganizationTreeFromFlat(result.data || []);
+
+      // 요약 정보 계산
+      const summary = calculateOrganizationSummary(result.data || []);
+
+      res.json({
+        success: true,
+        data: {
+          tree: treeData,
+          flatData: result.data || [],
+          summary: summary
+        },
+        message: '조직도 차트를 성공적으로 조회했습니다.'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        data: null,
+        message: result.Message || '조직도 차트 조회 중 오류가 발생했습니다.'
+      });
+    }
+
+  } catch (error) {
+    console.error('조직도 차트 조회 API 오류:', {
+      error: error.message,
+      stack: error.stack,
+      query: req.query,
+      user: req.user?.userId,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+    });
+  }
+};
+
+/**
+ * 부서 계층구조 조회
+ * @route GET /api/organization/department/:deptId/hierarchy
+ * @description 특정 부서의 하위 계층구조를 조회
+ * @access Private (JWT 토큰 필요)
+ */
+const getDepartmentHierarchy = async (req, res) => {
+  try {
+    // 1. 경로 파라미터 추출 및 검증
+    const { deptId } = req.params;
+
+    if (!deptId || isNaN(parseInt(deptId))) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: '유효한 부서 ID를 입력해주세요.'
+      });
+    }
+
+    console.log('부서 계층구조 조회 요청:', {
+      deptId: parseInt(deptId),
+      requestUser: req.user?.userId
+    });
+
+    // 2. x_GetDepartmentHierarchy 호출
+    const result = await executeStoredProcedureWithNamedParams('x_GetDepartmentHierarchy', {
+      DeptId: parseInt(deptId)
+    });
+
+    // 3. 결과 처리
+    if (result.ResultCode === 0) {
+      res.json({
+        success: true,
+        data: result.data || [],
+        message: '부서 계층구조를 성공적으로 조회했습니다.'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        data: null,
+        message: result.Message || '부서 계층구조 조회 중 오류가 발생했습니다.'
+      });
+    }
+
+  } catch (error) {
+    console.error('부서 계층구조 조회 API 오류:', {
+      error: error.message,
+      stack: error.stack,
+      deptId: req.params.deptId,
+      user: req.user?.userId,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+    });
+  }
+};
+
+/**
+ * 조직도 통계 정보 조회
+ * @route GET /api/organization/stats
+ * @description 조직도 통계 정보를 조회
+ * @access Private (JWT 토큰 필요)
+ */
+const getOrganizationStats = async (req, res) => {
+  try {
+    // 1. 쿼리 파라미터 추출
+    const { companyId } = req.query;
+
+    console.log('조직도 통계 조회 요청:', {
+      companyId: companyId || 'all',
+      requestUser: req.user?.userId
+    });
+
+    // 2. x_GetOrganizationStats 호출
+    const result = await executeStoredProcedureWithNamedParams('x_GetOrganizationStats', {
+      CompanyId: companyId ? parseInt(companyId) : null
+    });
+
+    // 3. 결과 처리
+    if (result.ResultCode === 0) {
+      // 첫 번째 결과는 전체 통계
+      const stats = result.data?.[0] || {};
+
+      res.json({
+        success: true,
+        data: {
+          TotalCompanies: stats.TotalCompanies || 0,
+          TotalSubCompanies: stats.TotalSubCompanies || 0,
+          TotalDepartments: stats.TotalDepartments || 0,
+          TotalPositions: stats.TotalPositions || 0,
+          TotalEmployees: stats.TotalEmployees || 0,
+          TopDepartmentsBySize: [] // 추후 구현
+        },
+        message: '조직도 통계를 성공적으로 조회했습니다.'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        data: null,
+        message: result.Message || '조직도 통계 조회 중 오류가 발생했습니다.'
+      });
+    }
+
+  } catch (error) {
+    console.error('조직도 통계 조회 API 오류:', {
+      error: error.message,
+      stack: error.stack,
+      query: req.query,
+      user: req.user?.userId,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+    });
+  }
+};
+
+/**
+ * 플랫 데이터를 트리 구조로 변환하는 헬퍼 함수
+ * @param {Array} flatData - 플랫 형태의 조직도 데이터
+ * @returns {Array} 트리 구조 데이터
+ */
+const buildOrganizationTreeFromFlat = (flatData) => {
+  if (!flatData || flatData.length === 0) return [];
+
+  const nodeMap = new Map();
+  const tree = [];
+
+  // 1단계: 모든 노드를 Map에 저장
+  flatData.forEach(item => {
+    nodeMap.set(item.NodeId, {
+      NodeType: item.NodeType,
+      NodeId: item.NodeId,
+      NodeName: item.NodeName,
+      NodeCode: item.NodeCode,
+      ParentId: item.ParentId,
+      Level: item.Level,
+      DisplayName: item.DisplayName,
+      MemberCount: item.MemberCount || 0,
+      IsActive: item.IsActive,
+      NodePath: item.NodePath,
+      CreatedAt: item.CreatedAt,
+      CompanyId: item.CompanyId,
+      SubCompanyId: item.SubCompanyId,
+      DeptId: item.DeptId,
+      PosId: item.PosId,
+      children: []
+    });
+  });
+
+  // 2단계: 부모-자식 관계 설정
+  flatData.forEach(item => {
+    const node = nodeMap.get(item.NodeId);
+    if (!node) return;
+
+    if (item.ParentId && nodeMap.has(item.ParentId)) {
+      // 부모가 있는 경우
+      const parent = nodeMap.get(item.ParentId);
+      if (parent) {
+        parent.children = parent.children || [];
+        parent.children.push(node);
+      }
+    } else {
+      // 루트 노드인 경우
+      tree.push(node);
+    }
+  });
+
+  return tree;
+};
+
+/**
+ * 조직도 요약 정보 계산하는 헬퍼 함수
+ * @param {Array} flatData - 플랫 형태의 조직도 데이터
+ * @returns {Object} 요약 정보 객체
+ */
+const calculateOrganizationSummary = (flatData) => {
+  if (!flatData || flatData.length === 0) {
+    return {
+      totalNodes: 0,
+      companies: 0,
+      subCompanies: 0,
+      departments: 0,
+      positions: 0
+    };
+  }
+
+  const summary = {
+    totalNodes: flatData.length,
+    companies: 0,
+    subCompanies: 0,
+    departments: 0,
+    positions: 0
+  };
+
+  flatData.forEach(item => {
+    switch (item.NodeType?.toLowerCase()) {
+      case 'company':
+        summary.companies++;
+        break;
+      case 'subcompany':
+        summary.subCompanies++;
+        break;
+      case 'department':
+        summary.departments++;
+        break;
+      case 'position':
+        summary.positions++;
+        break;
+    }
+  });
+
+  return summary;
+};
+
 const searchOrganization = async (req, res) => {
   res.status(501).json({
     success: false,
@@ -1883,6 +2170,9 @@ const searchOrganization = async (req, res) => {
 
 module.exports = {
   getOrganizationTree,
+  getOrganizationChart,
+  getDepartmentHierarchy,
+  getOrganizationStats,
   createCompany,
   getCompanies,
   getCompanyById,

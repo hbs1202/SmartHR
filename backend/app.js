@@ -40,7 +40,12 @@ app.use(helmet({
  */
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log('🔍 CORS 체크 - Origin:', origin);
+    // 개발 환경에서는 CORS 로그 최소화
+    if (process.env.NODE_ENV === 'development' && origin === 'http://localhost:5173') {
+      // 같은 origin에서의 반복 요청은 로그 생략
+    } else {
+      console.log('🔍 CORS 체크 - Origin:', origin);
+    }
     // 모든 origin 허용 (개발용)
     callback(null, true);
   },
@@ -53,7 +58,10 @@ app.use(cors(corsOptions));
 
 // OPTIONS 요청에 대한 추가 처리 (프리플라이트)
 app.options('*', (req, res) => {
-  console.log(`🔍 CORS 프리플라이트 요청: ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  // 개발 환경에서는 프리플라이트 로그 최소화
+  if (process.env.NODE_ENV !== 'development' || req.headers.origin !== 'http://localhost:5173') {
+    console.log(`🔍 CORS 프리플라이트 요청: ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  }
   res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
@@ -62,11 +70,11 @@ app.options('*', (req, res) => {
 });
 
 /**
- * Rate Limiting 설정
+ * Rate Limiting 설정 (개발 환경에서는 제한 완화)
  */
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15분
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 요청 제한
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // 개발용: 요청 제한 증가
   message: {
     success: false,
     data: null,
@@ -75,7 +83,13 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use('/api/', limiter);
+
+// 개발 환경에서는 rate limiting 비활성화
+if (process.env.NODE_ENV !== 'production') {
+  console.log('⚠️ 개발 환경: Rate limiting이 완화되었습니다.');
+} else {
+  app.use('/api/', limiter);
+}
 
 /**
  * 로깅 미들웨어

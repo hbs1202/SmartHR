@@ -25,8 +25,6 @@ import {
   Form,
   DatePicker,
   Breadcrumb,
-  Alert,
-  Divider,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -66,7 +64,6 @@ const { Option } = Select;
 const SubCompanyList: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | undefined>(undefined);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [subCompanies, setSubCompanies] = useState<SubCompany[]>([]);
   const [loading, setLoading] = useState(false);
   const [companyLoading, setCompanyLoading] = useState(false);
@@ -209,8 +206,6 @@ const SubCompanyList: React.FC = () => {
    */
   const handleCompanyChange = (companyId: number) => {
     setSelectedCompanyId(companyId);
-    const company = companies.find(c => c.CompanyId === companyId);
-    setSelectedCompany(company || null);
 
     // 필터 초기화
     const newFilters = {
@@ -323,7 +318,7 @@ const SubCompanyList: React.FC = () => {
       // 날짜 변환 처리 (시간대 문제 해결)
       const processedValues = {
         ...values,
-        openDate: values.openDate ? values.openDate.format('YYYY-MM-DD') : null
+        openDate: values.openDate ? (typeof values.openDate === 'string' ? values.openDate : values.openDate.format('YYYY-MM-DD')) : null
       };
 
       let response;
@@ -573,7 +568,7 @@ const SubCompanyList: React.FC = () => {
       dataIndex: 'CreatedAt',
       key: 'CreatedAt',
       width: 120,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
+      render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD') : '-',
     },
     {
       title: '작업',

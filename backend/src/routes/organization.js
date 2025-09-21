@@ -12,6 +12,11 @@ const { authenticateToken } = require('../middleware/auth');
 // 조직도 조회 API
 router.get('/tree', authenticateToken, require('../controllers/organization-controller').getOrganizationTree);
 
+// 새로운 조직도 차트 API (계층구조 트리)
+router.get('/chart', authenticateToken, require('../controllers/organizationController').getOrganizationChart);
+router.get('/department/:deptId/hierarchy', authenticateToken, require('../controllers/organizationController').getDepartmentHierarchy);
+router.get('/stats', authenticateToken, require('../controllers/organizationController').getOrganizationStats);
+
 // 회사 관리 API
 router.post('/companies', authenticateToken, require('../controllers/organization-controller').createCompany);
 router.get('/companies', authenticateToken, require('../controllers/organization-controller').getCompanies);

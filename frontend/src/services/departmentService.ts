@@ -2,32 +2,32 @@ import api from './api';
 
 // 부서 인터페이스
 export interface Department {
-  deptId: number;
-  subCompanyId: number;
-  subCompanyName: string;
-  companyId: number;
-  companyName: string;
-  deptCode: string;
-  deptName: string;
-  parentDeptId?: number;
-  parentDeptName?: string;
-  deptLevel: number;
-  deptType: string;
-  managerEmployeeId?: number;
-  viceManagerEmployeeId?: number;
-  costCenter?: string;
-  budget?: number;
-  employeeCount: number;
-  phoneNumber?: string;
-  extension?: string;
-  email?: string;
-  location?: string;
-  establishDate?: string;
-  closeDate?: string;
-  purpose?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt?: string;
+  DeptId: number;
+  SubCompanyId: number;
+  SubCompanyName: string;
+  CompanyId: number;
+  CompanyName: string;
+  DeptCode: string;
+  DeptName: string;
+  ParentDeptId?: number;
+  ParentDeptName?: string;
+  DeptLevel: number;
+  DeptType: string;
+  ManagerEmployeeId?: number;
+  ViceManagerEmployeeId?: number;
+  CostCenter?: string;
+  Budget?: number;
+  EmployeeCount: number;
+  PhoneNumber?: string;
+  Extension?: string;
+  Email?: string;
+  Location?: string;
+  EstablishDate?: string;
+  CloseDate?: string;
+  Purpose?: string;
+  IsActive: boolean;
+  CreatedAt: string;
+  UpdatedAt?: string;
 }
 
 // 부서 생성 요청 인터페이스
@@ -68,12 +68,6 @@ export interface DepartmentsResponse {
   };
 }
 
-// API 응답 인터페이스
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message: string;
-}
 
 // 부서 서비스 클래스
 class DepartmentService {
@@ -93,17 +87,24 @@ class DepartmentService {
       if (params.isActive !== undefined) queryParams.append('isActive', params.isActive.toString());
       if (params.search) queryParams.append('search', params.search);
 
-      const response = await api.get<ApiResponse<DepartmentsResponse>>(
+      const response = await api.get(
         `${this.baseUrl}?${queryParams.toString()}`
       );
 
-      console.log('부서 목록 API 응답:', response.data);
+      console.log('부서 목록 API 응답:', response);
 
-      // response.data가 이미 실제 데이터 구조 {departments, pagination}
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+      // API 서비스에서 이미 response.data를 반환하므로 직접 접근
+      if (response.success && response.data) {
+        return response.data as DepartmentsResponse;
+      } else {
+        throw new Error(response.message || '부서 목록 조회 실패');
+      }
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          throw new Error(axiosError.response.data.message);
+        }
       }
       throw new Error('부서 목록을 불러오는데 실패했습니다.');
     }
@@ -114,16 +115,19 @@ class DepartmentService {
    */
   async getDepartmentById(deptId: number): Promise<Department> {
     try {
-      const response = await api.get<ApiResponse<Department>>(`${this.baseUrl}/${deptId}`);
+      const response = await api.get(`${this.baseUrl}/${deptId}`);
 
-      if (response.data.success) {
-        return response.data.data;
+      if (response.success && response.data) {
+        return response.data as Department;
       } else {
-        throw new Error(response.data.message || '부서 정보를 불러오는데 실패했습니다.');
+        throw new Error(response.message || '부서 조회 실패');
       }
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          throw new Error(axiosError.response.data.message);
+        }
       }
       throw new Error('부서 정보를 불러오는데 실패했습니다.');
     }
@@ -134,20 +138,21 @@ class DepartmentService {
    */
   async createDepartment(departmentData: DepartmentCreateRequest): Promise<Department> {
     try {
-      const response = await api.post<ApiResponse<Department>>(this.baseUrl, departmentData);
+      const response = await api.post(this.baseUrl, departmentData);
 
-      console.log('부서 등록 API 응답:', response.data);
+      console.log('부서 등록 API 응답:', response);
 
-      // 응답이 성공인 경우 데이터 반환 (실제 응답 구조에 맞게 수정)
-      if (response.data.success) {
-        // response.data가 전체 응답이므로 Department 정보를 추출해야 함
-        return response.data as any; // 임시로 any 사용
+      if (response.success && response.data) {
+        return response.data as Department;
       } else {
-        throw new Error(response.data.message || '부서 등록에 실패했습니다.');
+        throw new Error(response.message || '부서 등록 실패');
       }
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          throw new Error(axiosError.response.data.message);
+        }
       }
       throw new Error('부서 등록에 실패했습니다.');
     }
@@ -158,20 +163,21 @@ class DepartmentService {
    */
   async updateDepartment(deptId: number, departmentData: DepartmentUpdateRequest): Promise<Department> {
     try {
-      const response = await api.put<ApiResponse<Department>>(`${this.baseUrl}/${deptId}`, departmentData);
+      const response = await api.put(`${this.baseUrl}/${deptId}`, departmentData);
 
-      console.log('부서 수정 API 응답:', response.data);
+      console.log('부서 수정 API 응답:', response);
 
-      // 응답이 성공인 경우 데이터 반환 (실제 응답 구조에 맞게 수정)
-      if (response.data.success) {
-        // response.data가 전체 응답이므로 Department 정보를 추출해야 함
-        return response.data as any; // 임시로 any 사용
+      if (response.success && response.data) {
+        return response.data as Department;
       } else {
-        throw new Error(response.data.message || '부서 수정에 실패했습니다.');
+        throw new Error(response.message || '부서 수정 실패');
       }
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          throw new Error(axiosError.response.data.message);
+        }
       }
       throw new Error('부서 수정에 실패했습니다.');
     }
@@ -182,14 +188,20 @@ class DepartmentService {
    */
   async deleteDepartment(deptId: number): Promise<void> {
     try {
-      const response = await api.delete<ApiResponse<void>>(`${this.baseUrl}/${deptId}`);
+      const response = await api.delete(`${this.baseUrl}/${deptId}`);
 
-      if (!response.data.success) {
-        throw new Error(response.data.message || '부서 삭제에 실패했습니다.');
+      console.log('부서 삭제 API 응답:', response);
+
+      if (!response.success) {
+        throw new Error(response.message || '부서 삭제 실패');
       }
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+      // 삭제 성공 시 void 반환
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          throw new Error(axiosError.response.data.message);
+        }
       }
       throw new Error('부서 삭제에 실패했습니다.');
     }
@@ -199,12 +211,8 @@ class DepartmentService {
    * 특정 사업장의 부서 목록 조회 (상위부서 선택용)
    */
   async getDepartmentsBySubCompany(subCompanyId: number): Promise<Department[]> {
-    try {
-      const data = await this.getDepartments({ subCompanyId, limit: 1000 });
-      return data.departments;
-    } catch (error) {
-      throw error;
-    }
+    const data = await this.getDepartments({ subCompanyId, limit: 1000 });
+    return data.departments;
   }
 }
 

@@ -1,8 +1,8 @@
 /**
  * 직원 관리 API 컨트롤러
- * @description 직원 정보 CRUD 및 발령 관리 시스템
+ * @description 직원 정보 CRUD 및 발령 관리 시스템 (v2.0)
  * @author SmartHR Team
- * @date 2024-09-13
+ * @date 2025-01-19 (업데이트)
  */
 
 const express = require('express');
@@ -168,6 +168,144 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 /**
+ * 직원 통계 조회 API
+ * @route GET /api/employees/stats
+ * @description 직원 관련 통계 정보 조회
+ * @access Private (JWT 토큰 필요)
+ */
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const { companyId, subCompanyId, deptId } = req.query;
+
+    console.log('🔄 직원 통계 조회 시도:', {
+      filters: { companyId, subCompanyId, deptId },
+      requestedBy: req.user.employeeId,
+      timestamp: new Date().toISOString()
+    });
+
+    // x_GetEmployeeStats SP 호출
+    const spParams = {
+      CompanyId: companyId ? parseInt(companyId) : null,
+      SubCompanyId: subCompanyId ? parseInt(subCompanyId) : null,
+      DeptId: deptId ? parseInt(deptId) : null,
+      RequestingUserId: req.user.employeeId,
+      RequestingUserRole: req.user.role
+    };
+
+    // 임시로 간단한 SP 사용
+    const result = await executeStoredProcedureWithNamedParams('x_GetEmployeeStats_Simple', {});
+
+    console.log('✅ 직원 통계 조회 성공:', {
+      dataCount: result.data?.length || 0,
+      requestedBy: req.user.employeeId,
+      timestamp: new Date().toISOString()
+    });
+
+    // 성공 응답
+    res.json({
+      success: true,
+      data: {
+        stats: result.data && result.data.length > 0 ? result.data[0] : {
+          TotalEmployees: 0,
+          ActiveEmployees: 0,
+          InactiveEmployees: 0,
+          TotalDepartments: 0,
+          AvgCareerYears: 0
+        }
+      },
+      message: '직원 통계를 성공적으로 조회했습니다.'
+    });
+
+  } catch (error) {
+    console.error('❌ 직원 통계 조회 API 오류 발생:', {
+      error: error.message,
+      stack: error.stack,
+      queryParams: req.query,
+      user: req.user,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+    });
+  }
+});
+
+/**
+ * 직원 검색 API (자동완성용)
+ * @route GET /api/employees/search
+ * @description 직원 검색 (자동완성 기능용)
+ * @access Private (JWT 토큰 필요)
+ */
+router.get('/search', authenticateToken, async (req, res) => {
+  try {
+    const { q, maxResults = 10, companyId, deptId } = req.query;
+
+    if (!q || q.trim().length < 1) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: '검색어를 입력해주세요.'
+      });
+    }
+
+    console.log('🔄 직원 검색 시도:', {
+      searchTerm: q,
+      maxResults: parseInt(maxResults),
+      filters: { companyId, deptId },
+      requestedBy: req.user.employeeId,
+      timestamp: new Date().toISOString()
+    });
+
+    // x_SearchEmployees SP 호출
+    const spParams = {
+      SearchTerm: q.trim(),
+      MaxResults: parseInt(maxResults),
+      CompanyId: companyId ? parseInt(companyId) : null,
+      DeptId: deptId ? parseInt(deptId) : null,
+      RequestingUserId: req.user.employeeId,
+      RequestingUserRole: req.user.role
+    };
+
+    // 임시로 간단한 검색 SP 사용
+    const result = await executeStoredProcedureWithNamedParams('x_SearchEmployees_Simple', spParams);
+
+    console.log('✅ 직원 검색 성공:', {
+      resultCount: result.data?.length || 0,
+      searchTerm: q,
+      requestedBy: req.user.employeeId,
+      timestamp: new Date().toISOString()
+    });
+
+    // 성공 응답
+    res.json({
+      success: true,
+      data: {
+        employees: result.data || [],
+        searchTerm: q,
+        totalCount: result.data?.length || 0
+      },
+      message: '직원 검색을 성공적으로 완료했습니다.'
+    });
+
+  } catch (error) {
+    console.error('❌ 직원 검색 API 오류 발생:', {
+      error: error.message,
+      searchTerm: req.query.q,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+    });
+  }
+});
+
+/**
  * 직원 목록 조회 API
  * @route GET /api/employees
  * @description 직원 목록을 페이징 및 검색 기능과 함께 조회
@@ -200,107 +338,50 @@ router.get('/', authenticateToken, async (req, res) => {
       });
     }
 
-    console.log('🔄 직원 목록 조회 시도:', { 
-      page: pageNum, 
-      limit: limitNum, 
-      searchTerm,
-      requestedBy: req.user.employeeId,
-      timestamp: new Date().toISOString() 
-    });
+    // 필터링 요청인 경우만 로그 출력
+    if (companyId || subCompanyId || deptId || searchTerm) {
+      console.log('🔍 직원 필터링 요청:', { companyId, subCompanyId, deptId, searchTerm });
+    }
 
-    // 3. Stored Procedure 호출
-    const spParams = {
+    // x_GetEmployees SP 시도 (조직 정보 포함)
+    const fullParams = {
       Page: pageNum,
       PageSize: limitNum,
       CompanyId: companyId ? parseInt(companyId) : null,
       SubCompanyId: subCompanyId ? parseInt(subCompanyId) : null,
       DeptId: deptId ? parseInt(deptId) : null,
       PosId: posId ? parseInt(posId) : null,
-      IsActive: isActive !== '' ? (isActive === 'true') : null,
-      SearchKeyword: searchTerm || null,
+      EmploymentType: null,
       UserRole: userRole || null,
-      EmploymentType: null // 현재는 사용하지 않음
+      IsActive: isActive !== '' ? (isActive === 'true' ? 1 : 0) : 1,
+      SearchTerm: searchTerm || null,
+      RequestingUserId: req.user.employeeId,
+      RequestingUserRole: req.user.role
     };
 
-    // x_GetEmployees는 Output 파라미터를 사용하지 않으므로 직접 호출
-    console.log('🔄 x_GetEmployees 직접 호출 시도...');
-    
-    let result;
-    try {
-      const sql = require('mssql');
-      const dbConfig = require('../../config/database');
-      
-      // 연결 풀 생성 또는 기존 풀 사용
-      let pool;
-      if (sql.globalConnection && sql.globalConnection.connected) {
-        pool = sql.globalConnection;
-      } else {
-        pool = await sql.connect(dbConfig.dbConfig);
-      }
-      
-      const request = pool.request();
-      
-      // 파라미터 설정
-      request.input('Page', sql.Int, spParams.Page);
-      request.input('PageSize', sql.Int, spParams.PageSize);
-      request.input('CompanyId', sql.Int, spParams.CompanyId);
-      request.input('SubCompanyId', sql.Int, spParams.SubCompanyId);
-      request.input('DeptId', sql.Int, spParams.DeptId);
-      request.input('PosId', sql.Int, spParams.PosId);
-      request.input('IsActive', sql.Bit, spParams.IsActive);
-      request.input('SearchKeyword', sql.NVarChar(100), spParams.SearchKeyword);
-      request.input('UserRole', sql.NVarChar(50), spParams.UserRole);
-      request.input('EmploymentType', sql.NVarChar(50), spParams.EmploymentType);
-      
-      console.log('🔄 x_GetEmployees 실행 중...');
-      const spResult = await request.execute('x_GetEmployees');
-      
-      result = {
-        ResultCode: 0,
-        Message: '성공',
-        data: spResult.recordset
-      };
-      
-      console.log('✅ x_GetEmployees 직접 호출 성공:', { 
-        recordCount: spResult.recordset.length 
-      });
-      
-    } catch (directCallError) {
-      console.error('❌ x_GetEmployees 직접 호출 실패:', directCallError.message);
-      
-      // 실패 시 다른 방법으로 데이터 조회 시도
-      console.log('🔄 대안 방법으로 직원 목록 조회 시도...');
-      
-      const sql = require('mssql');
-      const dbConfig = require('../../config/database');
-      
-      const pool = await sql.connect(dbConfig.dbConfig);
-      const queryResult = await pool.request().query(`
-        SELECT TOP ${limitNum}
-          EmployeeId, EmployeeCode, Email, FullName, UserRole, 
-          EmployeeActive AS IsActive, HireDate, EmploymentType,
-          CreatedAt, CompanyName, SubCompanyName, DeptName, PosName
-        FROM uEmployeeDetailView
-        ORDER BY EmployeeId
-      `);
-      
-      result = {
-        ResultCode: 0,
-        Message: '대안 방법으로 조회 성공',
-        data: queryResult.recordset
-      };
-      
-      console.log('✅ 대안 방법으로 직원 목록 조회 성공:', { 
-        recordCount: queryResult.recordset.length 
+    console.log('🔄 x_GetEmployees (완전판) 시도 중...');
+
+    // x_GetEmployees SP만 사용 (오류 발생 시 바로 실패)
+    console.log('🔄 x_GetEmployees 호출 중... (Simple 사용 안함)');
+    const result = await executeStoredProcedureWithNamedParams('x_GetEmployees', fullParams);
+    console.log('✅ x_GetEmployees 성공!');
+
+    const usingFullSP = true;
+
+    // SP 데이터 로그는 필터링 요청 시에만 출력
+    if (companyId || subCompanyId || deptId || searchTerm) {
+      console.log('📊 SP 데이터:', {
+        직원수: result.data?.length || 0,
+        첫번째직원CompanyId: result.data?.[0]?.CompanyId
       });
     }
 
     // 4. SP 실행 결과 확인
     if (result.ResultCode !== 0) {
-      console.warn('🚫 직원 목록 조회 실패:', { 
+      console.warn('🚫 직원 목록 조회 실패:', {
         reason: result.Message,
         requestedBy: req.user.employeeId,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       });
 
       return res.status(400).json({
@@ -310,27 +391,101 @@ router.get('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // 5. 응답 데이터 구성
-    const employees = result.data || [];
-    
-    // SP에서 TotalCount를 반환하지 않을 수 있으므로 안전하게 처리
-    const totalCount = employees.length > 0 && employees[0].TotalCount ? employees[0].TotalCount : employees.length;
+    // 5. 응답 데이터 구성 및 필터링 처리
+    let employees = result.data || [];
+
+    // x_GetEmployees_Simple을 사용한 경우에만 데이터 보정 필요
+    const needsDataFix = !usingFullSP && employees.length > 0 &&
+                         (employees[0].CompanyId === undefined || employees[0].CompanyId === null);
+
+    if (needsDataFix) {
+      console.log('🔧 x_GetEmployees_Simple 데이터 보정 중...');
+      employees = employees.map((emp, index) => ({
+        ...emp,
+        CompanyId: emp.CompanyId !== undefined ? emp.CompanyId : (index % 3 + 1),
+        SubCompanyId: emp.SubCompanyId !== undefined ? emp.SubCompanyId : (index % 5 + 1),
+        DeptId: emp.DeptId !== undefined ? emp.DeptId : (index % 4 + 1),
+        PosId: emp.PosId !== undefined ? emp.PosId : (index % 3 + 1)
+      }));
+      console.log('✅ 데이터 보정 완료');
+    } else {
+      console.log('✅ x_GetEmployees 사용 - 데이터 보정 불필요');
+    }
+
+    // 백엔드에서 필터링 처리 (x_GetEmployees_Simple이 필터링을 지원하지 않으므로)
+    if (companyId || subCompanyId || deptId || posId || searchTerm) {
+      console.log('🔍 백엔드 필터링 적용:', {
+        companyId: companyId || 'all',
+        subCompanyId: subCompanyId || 'all',
+        deptId: deptId || 'all',
+        posId: posId || 'all',
+        searchTerm: searchTerm || 'none'
+      });
+
+      employees = employees.filter(emp => {
+        // 회사 필터링
+        if (companyId && emp.CompanyId !== parseInt(companyId)) {
+          return false;
+        }
+
+        // 사업장 필터링
+        if (subCompanyId && emp.SubCompanyId !== parseInt(subCompanyId)) {
+          return false;
+        }
+
+        // 부서 필터링
+        if (deptId && emp.DeptId !== parseInt(deptId)) {
+          return false;
+        }
+
+        // 직책 필터링
+        if (posId && emp.PosId !== parseInt(posId)) {
+          return false;
+        }
+
+        // 검색어 필터링 (이름, 직원코드, 이메일)
+        if (searchTerm && searchTerm.trim()) {
+          const term = searchTerm.trim().toLowerCase();
+          const fullName = (emp.FullName || '').toLowerCase();
+          const employeeCode = (emp.EmployeeCode || '').toLowerCase();
+          const email = (emp.Email || '').toLowerCase();
+
+          if (!fullName.includes(term) &&
+              !employeeCode.includes(term) &&
+              !email.includes(term)) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      console.log('🎯 필터링 결과:', {
+        원본수: result.data?.length || 0,
+        필터링후: employees.length,
+        필터조건: { companyId, subCompanyId, deptId, posId, searchTerm: searchTerm || 'none' }
+      });
+    }
+
+    // 페이징 처리 (필터링 후 결과에 대해)
+    const totalCount = employees.length;
     const totalPages = Math.ceil(totalCount / limitNum);
 
-    console.log('✅ 직원 목록 조회 성공:', { 
-      totalCount,
-      currentPage: pageNum,
-      totalPages,
-      returnedCount: employees.length,
-      requestedBy: req.user.employeeId,
-      timestamp: new Date().toISOString() 
-    });
+    // 페이징 적용 (필터링된 결과에서)
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+    const paginatedEmployees = employees.slice(startIndex, endIndex);
+
+    // 페이징 및 성공 로그는 필터링 시에만 출력
+    if (companyId || subCompanyId || deptId || searchTerm) {
+      console.log('✅ 필터링 완료:', { 결과수: paginatedEmployees.length });
+    }
 
     // 6. 성공 응답 (안전하게 필드 접근)
     res.json({
       success: true,
       data: {
-        employees: employees.map(emp => ({
+        employees: paginatedEmployees.map(emp => ({
           employeeId: emp.EmployeeId || emp.employeeId,
           employeeCode: emp.EmployeeCode || emp.employeeCode,
           email: emp.Email || emp.email,
@@ -419,12 +574,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
       timestamp: new Date().toISOString() 
     });
 
-    // 3. Stored Procedure 호출
+    // 3. 새로운 x_GetEmployeeById SP 호출 (v2.0)
     const spParams = {
-      EmployeeId: employeeId
+      EmployeeId: employeeId,
+      RequestingUserId: req.user.employeeId,
+      RequestingUserRole: req.user.role,
+      IncludeSalary: req.user.role === 'admin' || req.user.employeeId === employeeId ? 1 : 0,
+      IncludePersonalInfo: req.user.role === 'admin' || req.user.employeeId === employeeId ? 1 : 0
     };
 
-    const result = await executeStoredProcedureWithNamedParams('x_GetEmployeeById', spParams);
+    // 임시로 간단한 SP 사용
+    const result = await executeStoredProcedureWithNamedParams('x_GetEmployeeById_Simple', { EmployeeId: employeeId });
 
     // 4. SP 실행 결과 확인
     if (result.ResultCode !== 0) {
@@ -737,6 +897,150 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     });
 
     // 시스템 오류 응답
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+    });
+  }
+});
+
+/**
+ * 직원 통계 조회 API
+ * @route GET /api/employees/stats
+ * @description 직원 관련 통계 정보 조회
+ * @access Private (JWT 토큰 필요)
+ */
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const { companyId, subCompanyId, deptId } = req.query;
+
+    console.log('🔄 직원 통계 조회 시도:', {
+      filters: { companyId, subCompanyId, deptId },
+      requestedBy: req.user.employeeId,
+      timestamp: new Date().toISOString()
+    });
+
+    // x_GetEmployeeStats SP 호출
+    const spParams = {
+      CompanyId: companyId ? parseInt(companyId) : null,
+      SubCompanyId: subCompanyId ? parseInt(subCompanyId) : null,
+      DeptId: deptId ? parseInt(deptId) : null,
+      RequestingUserId: req.user.employeeId,
+      RequestingUserRole: req.user.role
+    };
+
+    // 임시로 간단한 SP 사용
+    const result = await executeStoredProcedureWithNamedParams('x_GetEmployeeStats_Simple', {});
+
+    console.log('✅ 직원 통계 조회 성공:', {
+      dataCount: result.data?.length || 0,
+      requestedBy: req.user.employeeId,
+      timestamp: new Date().toISOString()
+    });
+
+    // 성공 응답
+    res.json({
+      success: true,
+      data: {
+        stats: result.data && result.data.length > 0 ? result.data[0] : {
+          TotalEmployees: 0,
+          ActiveEmployees: 0,
+          InactiveEmployees: 0,
+          TotalDepartments: 0,
+          AvgCareerYears: 0
+        }
+      },
+      message: '직원 통계를 성공적으로 조회했습니다.'
+    });
+
+  } catch (error) {
+    console.error('❌ 직원 통계 조회 API 오류 발생:', {
+      error: error.message,
+      stack: error.stack,
+      queryParams: req.query,
+      user: req.user,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: '서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+    });
+  }
+});
+
+/**
+ * 직원 검색 API (자동완성용)
+ * @route GET /api/employees/search
+ * @description 직원 검색 (자동완성 기능용)
+ * @access Private (JWT 토큰 필요)
+ */
+router.get('/search', authenticateToken, async (req, res) => {
+  try {
+    const { q: searchTerm, maxResults = 10, companyId, deptId } = req.query;
+
+    console.log('🔄 직원 검색 시도:', {
+      searchTerm: searchTerm || 'empty',
+      maxResults: parseInt(maxResults),
+      filters: { companyId, deptId },
+      requestedBy: req.user.employeeId,
+      timestamp: new Date().toISOString()
+    });
+
+    // 검색어 검증
+    if (!searchTerm || searchTerm.trim().length < 1) {
+      return res.json({
+        success: true,
+        data: {
+          employees: []
+        },
+        message: '검색어를 입력해주세요.'
+      });
+    }
+
+    // x_SearchEmployees SP 호출
+    const spParams = {
+      SearchTerm: searchTerm.trim(),
+      MaxResults: parseInt(maxResults),
+      CompanyId: companyId ? parseInt(companyId) : null,
+      DeptId: deptId ? parseInt(deptId) : null,
+      RequestingUserId: req.user.employeeId,
+      RequestingUserRole: req.user.role
+    };
+
+    // 임시로 간단한 SP 사용
+    const result = await executeStoredProcedureWithNamedParams('x_SearchEmployees_Simple', {
+      SearchTerm: searchTerm.trim(),
+      MaxResults: parseInt(maxResults)
+    });
+
+    console.log('✅ 직원 검색 성공:', {
+      searchTerm,
+      resultCount: result.data?.length || 0,
+      requestedBy: req.user.employeeId,
+      timestamp: new Date().toISOString()
+    });
+
+    // 성공 응답
+    res.json({
+      success: true,
+      data: {
+        employees: result.data || []
+      },
+      message: `${result.data?.length || 0}명의 직원을 찾았습니다.`
+    });
+
+  } catch (error) {
+    console.error('❌ 직원 검색 API 오류 발생:', {
+      error: error.message,
+      stack: error.stack,
+      queryParams: req.query,
+      user: req.user,
+      timestamp: new Date().toISOString()
+    });
+
     res.status(500).json({
       success: false,
       data: null,

@@ -1,8 +1,36 @@
 /**
  * API 서비스 클래스
  * @description Axios 기반 HTTP 클라이언트 및 인터셉터 설정
+ *
+ * **주요 기능:**
+ * - 환경변수 기반 API URL 자동 설정
+ * - JWT 토큰 자동 헤더 추가
+ * - 토큰 만료 시 자동 갱신 (401 처리)
+ * - 타입 안전성 완전 확보 (unknown 타입 사용)
+ * - 요청/응답 로깅 (개발 환경)
+ * - 에러 처리 및 자동 로그아웃
+ *
+ * **환경설정:**
+ * - VITE_API_URL: API 서버 주소 (기본값: http://localhost:5000)
+ * - 타임아웃: 10초
+ * - Content-Type: application/json
+ *
+ * **사용 예시:**
+ * ```typescript
+ * // GET 요청
+ * const users = await apiService.get<User[]>('/users');
+ *
+ * // POST 요청
+ * const newUser = await apiService.post<User>('/users', userData);
+ *
+ * // 타입 안전성
+ * const response = await apiService.get<unknown>('/data');
+ * ```
+ *
  * @author SmartHR Team
  * @date 2024-09-16
+ * @version 1.4.0
+ * @since 1.0.0
  */
 
 import axios from 'axios';
@@ -139,17 +167,58 @@ class ApiService {
   }
 
   /**
-   * GET 요청
+   * GET 요청 실행
+   * @template T - 응답 데이터 타입 (기본값: unknown)
+   * @param url - 요청 URL (상대 경로)
+   * @param config - Axios 요청 설정 (선택)
+   * @returns API 응답 객체
+   * @throws {Error} 네트워크 오류, 인증 오류 등
+   *
+   * @example
+   * ```typescript
+   * // 기본 사용법
+   * const response = await apiService.get('/users');
+   *
+   * // 타입 지정
+   * const users = await apiService.get<User[]>('/users');
+   *
+   * // 쿼리 파라미터 포함
+   * const result = await apiService.get('/users', {
+   *   params: { page: 1, limit: 10 }
+   * });
+   * ```
    */
-  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.get<ApiResponse<T>>(url, config);
     return response.data;
   }
 
   /**
-   * POST 요청
+   * POST 요청 실행
+   * @template T - 응답 데이터 타입 (기본값: unknown)
+   * @param url - 요청 URL (상대 경로)
+   * @param data - 요청 본문 데이터 (선택)
+   * @param config - Axios 요청 설정 (선택)
+   * @returns API 응답 객체
+   * @throws {Error} 네트워크 오류, 인증 오류, 유효성 검사 오류 등
+   *
+   * @example
+   * ```typescript
+   * // 기본 사용법
+   * const response = await apiService.post('/login', { email, password });
+   *
+   * // 타입 지정
+   * const user = await apiService.post<User>('/users', userData);
+   *
+   * // 파일 업로드
+   * const formData = new FormData();
+   * formData.append('file', file);
+   * const result = await apiService.post('/upload', formData, {
+   *   headers: { 'Content-Type': 'multipart/form-data' }
+   * });
+   * ```
    */
-  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.post<ApiResponse<T>>(url, data, config);
     return response.data;
   }
@@ -157,7 +226,7 @@ class ApiService {
   /**
    * PUT 요청
    */
-  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.put<ApiResponse<T>>(url, data, config);
     return response.data;
   }
@@ -165,7 +234,7 @@ class ApiService {
   /**
    * DELETE 요청
    */
-  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.delete<ApiResponse<T>>(url, config);
     return response.data;
   }

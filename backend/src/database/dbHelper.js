@@ -83,10 +83,22 @@ const executeStoredProcedureWithNamedParams = async (procedureName, inputParams 
       }
     });
 
-    // 기본 Output 파라미터 추가
-    request.output('ResultCode', sql.Int);
-    request.output('Message', sql.NVarChar(500));
-    
+    // Output 파라미터를 사용하지 않는 SP들 (SELECT 결과만 반환)
+    const directResultSPs = [
+      'x_GetOrganizationChart', 'x_GetOrganizationStats', 'x_GetDepartmentHierarchy',
+      'x_GetEmployees', 'x_GetEmployees_Simple',
+      'x_GetEmployeeById_Simple',
+      'x_GetEmployeeStats', 'x_GetEmployeeStats_Simple',
+      'x_SearchEmployees', 'x_SearchEmployees_Simple'
+    ];
+    const isDirectResultSP = directResultSPs.includes(procedureName);
+
+    if (!isDirectResultSP) {
+      // 기본 Output 파라미터 추가 (직접 결과 반환 SP 제외)
+      request.output('ResultCode', sql.Int);
+      request.output('Message', sql.NVarChar(500));
+    }
+
     // 추가 Output 파라미터
     Object.entries(outputParams).forEach(([paramName, sqlType]) => {
       request.output(paramName, sqlType);
@@ -96,14 +108,25 @@ const executeStoredProcedureWithNamedParams = async (procedureName, inputParams 
     const result = await request.execute(procedureName);
     
     console.log(`✅ SP 실행 완료: ${procedureName}`);
-    
-    return {
-      ResultCode: result.output.ResultCode,
-      Message: result.output.Message,
-      data: result.recordset,
-      output: result.output,
-      returnValue: result.returnValue
-    };
+
+    // 직접 결과 반환 SP들은 다른 반환 형식 사용
+    if (isDirectResultSP) {
+      return {
+        ResultCode: 0, // 성공
+        Message: 'Success',
+        data: result.recordset,
+        output: result.output,
+        returnValue: result.returnValue
+      };
+    } else {
+      return {
+        ResultCode: result.output.ResultCode,
+        Message: result.output.Message,
+        data: result.recordset,
+        output: result.output,
+        returnValue: result.returnValue
+      };
+    }
 
   } catch (error) {
     console.error(`❌ SP 실행 오류 [${procedureName}]:`, {
