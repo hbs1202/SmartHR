@@ -12,9 +12,9 @@ const { authenticateToken } = require('../middleware/auth');
 const { executeStoredProcedureWithNamedParams } = require('../database/dbHelper');
 
 /**
- * 직원 등록 API
+ * 직원 등록 API (발령 이력 자동 생성 포함)
  * @route POST /api/employees
- * @description 새로운 직원을 등록하고 발령 이력을 생성
+ * @description 새로운 직원을 등록하고 입사 발령 이력을 자동 생성
  * @access Private (JWT 토큰 필요, admin/manager 권한)
  */
 router.post('/', authenticateToken, async (req, res) => {
@@ -31,14 +31,13 @@ router.post('/', authenticateToken, async (req, res) => {
     // 2. 요청 데이터 추출 및 검증
     const {
       companyId,
-      subCompanyId, 
+      subCompanyId,
       deptId,
       posId,
       employeeCode,
       password,
       email,
-      firstName,
-      lastName,
+      fullName,
       nameEng,
       gender,
       birthDate,
@@ -46,21 +45,56 @@ router.post('/', authenticateToken, async (req, res) => {
       hireDate,
       employmentType,
       currentSalary,
-      userRole
+      userRole,
+      // 발령 관련 추가 필드
+      assignmentReason = '신규 채용',
+      categoryId = 1,           // 입사 카테고리
+      assignmentTypeId = 1,     // 신규입사 타입
+      reasonId = 1              // 채용 사유
     } = req.body;
 
-    // 3. 필수 파라미터 검증
-    if (!companyId || !subCompanyId || !deptId || !posId || 
-        !employeeCode || !password || !email || !firstName || !lastName || !hireDate) {
+    // 3. 받은 요청 데이터 로그 출력
+    console.log('📥 받은 요청 body:', {
+      ...req.body,
+      password: req.body.password ? '****' : undefined
+    });
+
+    // 4. 필수 파라미터 개별 검증
+    const missingFields = [];
+    if (!companyId) missingFields.push('회사');
+    if (!subCompanyId) missingFields.push('사업장');
+    if (!deptId) missingFields.push('부서');
+    if (!posId) missingFields.push('직책');
+    if (!employeeCode) missingFields.push('직원코드');
+    if (!password) missingFields.push('비밀번호');
+    if (!email) missingFields.push('이메일');
+    if (!fullName) missingFields.push('사원명');
+    if (!hireDate) missingFields.push('입사일');
+
+    console.log('❓ 필수 필드 검증 결과:', {
+      companyId,
+      subCompanyId,
+      deptId,
+      posId,
+      employeeCode,
+      password: password ? '있음' : '없음',
+      email,
+      fullName,
+      hireDate,
+      missingFields
+    });
+
+    if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
         data: null,
-        message: '필수 입력 항목이 누락되었습니다. (회사, 사업장, 부서, 직책, 직원코드, 비밀번호, 이메일, 이름, 입사일)'
+        message: `필수 입력 항목이 누락되었습니다: ${missingFields.join(', ')}`
       });
     }
 
-    // 4. 이메일 형식 검증
+    // 5. 이메일 형식 검증
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    console.log('📧 이메일 검증:', { email, isValid: emailRegex.test(email) });
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
@@ -69,90 +103,155 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // 5. 비밀번호 해싱
+    // 6. 날짜 형식 검증
+    const hireDateObj = new Date(hireDate);
+    console.log('📅 날짜 검증:', {
+      hireDate,
+      hireDateObj,
+      isValid: !isNaN(hireDateObj.getTime()),
+      timestamp: hireDateObj.getTime()
+    });
+    if (isNaN(hireDateObj.getTime())) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: '올바른 입사일 형식을 입력해주세요. (YYYY-MM-DD)'
+      });
+    }
+
+    console.log('✅ 모든 검증 통과, 비밀번호 해싱 시작...');
+
+    // 6. 비밀번호 해싱
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    console.log('🔄 직원 등록 시도:', { 
-      employeeCode, 
-      email, 
+    console.log('🔄 직원 등록 + 발령 이력 생성 시도:', {
+      employeeCode,
+      email,
+      fullName,
+      password: password ? '****' : undefined,
+      companyId,
+      subCompanyId,
+      deptId,
+      posId,
+      hireDate,
       createdBy: req.user.employeeId,
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString()
     });
 
-    // 6. Stored Procedure 호출
+    console.log('📋 받은 전체 요청 데이터:', {
+      ...req.body,
+      password: req.body.password ? '****' : undefined
+    });
+
+    // 7. 직원 등록 + 발령 이력 생성을 위한 통합 SP 호출
     const spParams = {
-      CompanyId: companyId,
-      SubCompanyId: subCompanyId,
-      DeptId: deptId,
-      PosId: posId,
+      // 직원 기본 정보
+      CompanyId: parseInt(companyId),
+      SubCompanyId: parseInt(subCompanyId),
+      DeptId: parseInt(deptId),
+      PosId: parseInt(posId),
       EmployeeCode: employeeCode,
       Password: hashedPassword,
       Email: email,
-      FirstName: firstName,
-      LastName: lastName,
+      FullName: fullName,
       NameEng: nameEng || null,
       Gender: gender || null,
       BirthDate: birthDate || null,
       PhoneNumber: phoneNumber || null,
-      HireDate: hireDate,
+      HireDate: hireDateObj,
       EmploymentType: employmentType || '정규직',
-      CurrentSalary: currentSalary || null,
+      CurrentSalary: currentSalary ? parseFloat(currentSalary) : null,
       UserRole: userRole || 'employee',
-      CreatedBy: req.user.employeeId
+      CreatedBy: req.user.employeeId,
+
+      // 발령 관련 정보 (입사 발령 자동 생성)
+      AssignmentReason: assignmentReason,
+      ApprovalStatus: 'APPROVED'  // 입사 발령은 자동 승인
     };
 
-    const result = await executeStoredProcedureWithNamedParams('x_CreateEmployee', spParams);
+    // 8. 통합 SP 호출 (직원 등록 + 발령 이력 생성)
+    console.log('🔄 x_CreateEmployeeWithAssignment SP 호출 중...');
+    const result = await executeStoredProcedureWithNamedParams('x_CreateEmployeeWithAssignment', spParams);
 
-    // 7. SP 실행 결과 확인
-    if (result.ResultCode !== 0) {
-      console.warn('🚫 직원 등록 실패:', { 
-        employeeCode, 
+    // 9. SP 실행 결과 확인
+    console.log('📊 SP 실행 결과:', result);
+
+    // SP 결과가 배열 형태로 반환되므로 첫 번째 레코드에서 결과 확인
+    const spResult = result.data && result.data.length > 0 ? result.data[0] : null;
+
+    if (!spResult || spResult.ResultCode !== 0) {
+      console.warn('🚫 직원 등록 + 발령 이력 생성 실패:', {
+        employeeCode,
         email,
-        reason: result.Message,
-        timestamp: new Date().toISOString() 
+        resultCode: spResult?.ResultCode,
+        reason: spResult?.Message,
+        timestamp: new Date().toISOString()
       });
 
       return res.status(400).json({
         success: false,
         data: null,
-        message: result.Message || '직원 등록에 실패했습니다.'
+        message: spResult?.Message || '직원 등록에 실패했습니다.'
       });
     }
 
-    // 8. 성공 시 새로 생성된 직원 정보 조회
-    const newEmployeeData = result.data && result.data.length > 0 ? result.data[0] : null;
+    // 10. 성공 시 새로 생성된 직원 및 발령 정보 조회
+    const responseData = spResult;
 
-    console.log('✅ 직원 등록 성공:', { 
-      employeeId: newEmployeeData?.NewEmployeeId || 'unknown',
+    console.log('✅ 직원 등록 + 발령 이력 생성 성공:', {
+      employeeId: responseData?.EmployeeId || 'unknown',
+      assignmentId: responseData?.AssignmentId || 'unknown',
       employeeCode,
       email,
       createdBy: req.user.employeeId,
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString()
     });
 
-    // 9. 성공 응답
+    // 11. 성공 응답
     res.status(201).json({
       success: true,
       data: {
-        employeeId: newEmployeeData?.NewEmployeeId,
-        employeeCode: employeeCode,
-        email: email,
-        fullName: `${firstName} ${lastName}`,
-        hireDate: hireDate,
-        message: '직원이 성공적으로 등록되었습니다.'
+        // 직원 정보
+        employee: {
+          employeeId: responseData?.EmployeeId,
+          employeeCode: employeeCode,
+          email: email,
+          fullName: fullName,
+          hireDate: hireDate,
+          companyId: parseInt(companyId),
+          subCompanyId: parseInt(subCompanyId),
+          deptId: parseInt(deptId),
+          posId: parseInt(posId)
+        },
+        // 발령 정보
+        assignment: {
+          assignmentId: responseData?.AssignmentId,
+          assignmentType: 'HIRING',
+          assignmentDate: hireDate,
+          assignmentReason: assignmentReason,
+          newCompanyName: responseData?.CompanyName,
+          newSubCompanyName: responseData?.SubCompanyName,
+          newDeptName: responseData?.DeptName,
+          newPosName: responseData?.PosName,
+          approvalStatus: 'APPROVED'
+        }
       },
-      message: result.Message || '직원이 성공적으로 등록되었습니다.'
+      message: responseData?.Message || '직원이 성공적으로 등록되었으며, 입사 발령 이력이 자동으로 생성되었습니다.'
     });
 
   } catch (error) {
     // 시스템 오류 로깅
-    console.error('❌ 직원 등록 API 오류 발생:', {
+    console.error('❌ 직원 등록 + 발령 이력 생성 API 오류 발생:', {
       error: error.message,
       stack: error.stack,
       requestBody: req.body ? {
         employeeCode: req.body.employeeCode,
-        email: req.body.email
+        email: req.body.email,
+        companyId: req.body.companyId,
+        subCompanyId: req.body.subCompanyId,
+        deptId: req.body.deptId,
+        posId: req.body.posId
       } : null, // 비밀번호는 로깅하지 않음
       user: req.user,
       timestamp: new Date().toISOString()
@@ -467,14 +566,28 @@ router.get('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // 페이징 처리 (필터링 후 결과에 대해)
-    const totalCount = employees.length;
+    // SP에서 반환된 TotalCount 사용 - 첫 번째 레코드에서 추출
+    let totalCount = 0;
+    if (employees.length > 0 && employees[0].TotalCount !== undefined && employees[0].TotalCount !== null) {
+      totalCount = employees[0].TotalCount;
+      console.log('✅ SP의 TotalCount 사용:', totalCount);
+    } else {
+      totalCount = employees.length;
+      console.log('⚠️ SP TotalCount 없음, 배열 길이 사용:', totalCount);
+    }
+
     const totalPages = Math.ceil(totalCount / limitNum);
 
-    // 페이징 적용 (필터링된 결과에서)
-    const startIndex = (pageNum - 1) * limitNum;
-    const endIndex = startIndex + limitNum;
-    const paginatedEmployees = employees.slice(startIndex, endIndex);
+    console.log('📊 페이징 계산:', {
+      totalCount,
+      totalPages,
+      pageNum,
+      limitNum,
+      startIndex: (pageNum - 1) * limitNum
+    });
+
+    // SP에서 이미 페이징된 결과를 받으므로 추가 페이징 불필요
+    const paginatedEmployees = employees;
 
     // 페이징 및 성공 로그는 필터링 시에만 출력
     if (companyId || subCompanyId || deptId || searchTerm) {

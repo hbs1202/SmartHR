@@ -59,7 +59,7 @@ export const logoutAsync = createAsyncThunk(
     } catch (error: any) {
       // 로그아웃은 실패해도 로컬 상태는 정리
       console.warn('로그아웃 중 오류 발생:', error);
-      return true;
+      return rejectWithValue(error.message || '로그아웃 중 오류가 발생했습니다.');
     }
   }
 );

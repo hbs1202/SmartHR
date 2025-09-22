@@ -166,7 +166,7 @@ export const searchOrganizationNodes = (
 
     if (nodeType && node.NodeType !== nodeType) {
       // 타입 필터가 있고 일치하지 않으면 자식만 검색
-      const matchingChildren = node.children?.map(child => searchInNode(child)).filter(Boolean) || [];
+      const matchingChildren = node.children?.map(child => searchInNode(child)).filter((child): child is OrganizationNode => child !== null) || [];
       return matchingChildren.length > 0 ? { ...node, children: matchingChildren } : null;
     }
 
@@ -175,11 +175,11 @@ export const searchOrganizationNodes = (
     }
 
     // 자식 노드에서 검색
-    const matchingChildren = node.children?.map(child => searchInNode(child)).filter(Boolean) || [];
+    const matchingChildren = node.children?.map(child => searchInNode(child)).filter((child): child is OrganizationNode => child !== null) || [];
     return matchingChildren.length > 0 ? { ...node, children: matchingChildren } : null;
   };
 
-  return nodes.map(node => searchInNode(node)).filter(Boolean) as OrganizationNode[];
+  return nodes.map(node => searchInNode(node)).filter((node): node is OrganizationNode => node !== null);
 };
 
 /**
@@ -196,7 +196,7 @@ export const getNodePath = (node: OrganizationNode): string => {
     pathParts.push(node.NodeName);
   } else if (node.NodeType === 'department') {
     pathParts.push(node.NodeName);
-  } else if (node.NodeType === 'position') {
+  } else if (node.NodeType === 'employee') {
     pathParts.push(node.NodeName);
   }
 

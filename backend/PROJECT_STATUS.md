@@ -327,6 +327,23 @@
   - [x] 페이징 처리 - 10/20/50/100개씩 보기 옵션
   - [x] 반응형 레이아웃 - 모바일/데스크탑 최적화
 
+### 20. 직원 관리 시스템 발령 연동 구현 (NEW!) 🎯
+- [x] 직원 등록 API 발령 연동 업그레이드
+  - [x] employee-controller.js createEmployee 함수 확장 - 발령 이력 자동 생성 파라미터 추가
+  - [x] x_CreateEmployeeWithAssignment SP 연동 - 직원 등록 + 입사 발령 이력 트랜잭션 처리
+  - [x] 입사 발령 자동 생성 로직 - categoryId=1(입사), assignmentTypeId=1(신규입사), reasonId=1(채용)
+  - [x] 응답 데이터 구조 확장 - employee 정보 + assignment 정보 통합 반환
+- [x] 직원 발령 이력 조회 API 추가
+  - [x] employee-assignment-controller.js 신규 생성 - 직원별 발령 이력 전용 컨트롤러
+  - [x] GET /api/employees/:id/assignments 엔드포인트 - 페이징, 필터링, 권한 제어
+  - [x] x_GetEmployeeAssignments SP 연동 - 발령 이력 조회, 조직 정보 포함
+  - [x] 라우터 설정 업데이트 - employee.js에 employee-assignment-controller 추가
+- [x] 발령 연동 시스템 설계 완료
+  - [x] 직원 등록 시 입사 발령 자동 생성 워크플로우 설계
+  - [x] 발령 이력 추적 시스템 - 입사일부터 모든 조직 변경 이력 통합 관리
+  - [x] 데이터 일관성 보장 - 직원 현재 소속 = 최신 발령 결과
+  - [x] 권한 기반 접근 제어 - 본인/admin/manager만 발령 이력 조회 가능
+
 ### 18. 부서 관리 시스템 API 응답 구조 최적화 (NEW!) 🎉
 - [x] departmentService.ts API 응답 구조 일관성 확보
   - [x] getDepartments 함수 - `response.data` 직접 반환으로 수정
@@ -390,12 +407,13 @@ npm start
 - `POST /api/auth/logout` - 로그아웃 (JWT 인증 필요)
 - `GET /api/auth/me` - 사용자 정보 조회 (JWT 인증 필요)
 
-### 직원 관리 API 엔드포인트
-- `POST /api/employees` - 직원 등록 (admin/manager 전용)
+### 직원 관리 API 엔드포인트 (발령 연동 완료!) 🎯
+- `POST /api/employees` - 직원 등록 + 입사 발령 자동 생성 (admin/manager 전용)
 - `GET /api/employees` - 직원 목록 조회 (페이징, 검색, 필터링)
 - `GET /api/employees/:id` - 직원 상세 조회 (본인/admin/manager)
 - `PUT /api/employees/:id` - 직원 정보 수정 (본인/admin/manager)
 - `DELETE /api/employees/:id` - 직원 삭제 (admin 전용, 소프트 삭제)
+- `GET /api/employees/:id/assignments` - 직원 발령 이력 조회 (본인/admin/manager)
 
 ### 발령 관리 API 엔드포인트 (NEW!) 🎉
 - `POST /api/assignments/:employeeId` - 종합 발령 처리 (회사/사업장/부서/직책 + 발령유형)
@@ -723,22 +741,23 @@ NODE_ENV=development
 
 ---
 
-**📊 프로젝트 완료율: 99.5% (직원 필터링 시스템 완전 구현! 조직도 + 인증 + 직원 관리 + 발령 관리 + 사업장 관리 + 부서 관리 + 필터링 시스템 전체 완성)** 🎉
+**📊 프로젝트 완료율: 99.7% (직원-발령 연동 시스템 완전 구현! 조직도 + 인증 + 직원 관리 + 발령 관리 + 사업장 관리 + 부서 관리 + 직원-발령 통합 시스템 전체 완성)** 🎉
 
-조직도 관리, 인증, 직원 관리, 발령 관리, 사업장 관리, 부서 관리 시스템이 완전히 구축되어 실제 기업 HR 업무를 처리할 수 있는 완성도 높은 SmartHR 시스템이 완성되었습니다.
+조직도 관리, 인증, 직원 관리, 발령 관리, 사업장 관리, 부서 관리 시스템이 완전히 구축되고, **직원 등록 시 발령 이력 자동 생성** 연동까지 완료되어 실제 기업 HR 업무를 처리할 수 있는 완성도 높은 SmartHR 시스템이 완성되었습니다.
 
 ### 🎯 현재 시스템 상태
 - **완료된 테이블:** 9개 (조직도 4개 + 직원 2개 + 발령유형 3개) - uSubCompanyTb 필드 확장 완료
-- **완료된 SP:** 24개 (조직도 관리 + 직원 관리 + 인증 관리 + 발령 관리) - x_Department 시리즈 3개 추가 ✨
-- **완료된 API:** 42개 (조직도 28개 + 인증 4개 + 직원 관리 5개 + 발령 관리 5개) - 부서 관리 API 5개 추가 ✨
+- **완료된 SP:** 25개 (조직도 관리 + 직원 관리 + 인증 관리 + 발령 관리) - x_CreateEmployeeWithAssignment 추가 ✨
+- **완료된 API:** 43개 (조직도 28개 + 인증 4개 + 직원 관리 6개 + 발령 관리 5개) - 직원 발령 이력 조회 API 추가 ✨
 - **프론트엔드 UI:** 사업장 관리 + 부서 관리 시스템 완전 구축 (DepartmentList 컴포넌트 개발 완료) ✨
 - **테스트 데이터:** 5명의 직원 계정 + 6개 발령 대분류 + 12개 세부유형 + 12개 사유
 - **인증 시스템:** JWT Access/Refresh Token, bcrypt 보안, 완전 동작
-- **직원 관리:** CRUD 완전 구현, 권한 제어, 소프트 삭제
-- **발령 관리:** 종합 발령 처리, 발령 유형 관리, 마스터 데이터 API 완전 구현
+- **직원 관리:** CRUD 완전 구현, 권한 제어, 소프트 삭제, **발령 연동 완료** ✨
+- **발령 관리:** 종합 발령 처리, 발령 유형 관리, 마스터 데이터 API 완전 구현, **직원 등록 연동 완료** ✨
 - **사업장 관리:** 데이터베이스 스키마 확장, 폼 매핑 수정, 날짜 처리 안정화 완료
 - **부서 관리:** 저장 프로시저, 백엔드 API, 프론트엔드 UI 완전 구축 ✨
-- **다음 단계:** 직책 관리 UI 또는 직원 관리 UI 구현
+- **직원-발령 통합:** 신입사원 등록 시 입사 발령 자동 생성, 발령 이력 추적 시스템 완료 ✨
+- **다음 단계:** 직원 등록 모달 UI 구현 (발령 연동 적용)
 
 ### 🎯 현재 데이터베이스 상태
 - **조직도 테이블:** uCompanyTb, uSubCompanyTb(필드 확장), uDeptTb, uPositionTb (4개) ✨

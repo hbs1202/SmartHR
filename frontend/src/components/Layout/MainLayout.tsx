@@ -353,7 +353,9 @@ const MainLayout: React.FC = () => {
             padding: '24px',
             background: '#fff',
             borderRadius: '6px',
-            overflow: 'auto',
+            overflow: 'hidden',
+            height: 'calc(100vh - 112px)', // 헤더(64px) + 마진(48px) = 112px
+            maxHeight: 'calc(100vh - 112px)',
           }}
         >
           <Outlet />

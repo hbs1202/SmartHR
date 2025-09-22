@@ -93,6 +93,32 @@ export interface EmployeeSearchParams {
   deptId?: number;
 }
 
+// 직원 등록 요청 타입
+export interface EmployeeCreateRequest {
+  fullName: string;          // 사원명 통합 필드
+  email: string;
+  employeeCode: string;
+  password: string;          // 백엔드 필수 필드 추가
+  phoneNumber?: string;
+  mobileNumber: string;
+  socialSecurityNumber: string;
+  postalCode: string;
+  address: string;
+  addressDetail?: string;
+  hireDate: string;
+  companyId: number;
+  subCompanyId: number;
+  deptId: number;
+  posId: number;
+  salary: number;
+  salaryType: string;
+  notes?: string;
+  assignmentReason?: string;
+  categoryId?: number;
+  assignmentTypeId?: number;
+  reasonId?: number;
+}
+
 /**
  * 직원 목록 조회
  * @param params 조회 파라미터
@@ -102,7 +128,7 @@ export const getEmployees = async (params: EmployeeListParams = {}): Promise<Api
   try {
     console.log('직원 목록 조회 요청:', params);
 
-    const response = await api.get('/api/employees', { params });
+    const response = await api.get<EmployeeListResponse>('/api/employees', { params });
 
     console.log('직원 목록 조회 응답:', response);
     return response;
@@ -125,7 +151,7 @@ export const getEmployeeById = async (
   try {
     console.log('직원 상세 조회 요청:', { employeeId, params });
 
-    const response = await api.get(`/api/employees/${employeeId}`, { params });
+    const response = await api.get<{ employee: Employee }>(`/api/employees/${employeeId}`, { params });
 
     console.log('직원 상세 조회 응답:', response);
     return response;
@@ -151,7 +177,7 @@ export const getEmployeeStats = async (
     const params = { companyId, subCompanyId, deptId };
     console.log('직원 통계 조회 요청:', params);
 
-    const response = await api.get('/api/employees/stats', { params });
+    const response = await api.get<{ stats: EmployeeStats }>('/api/employees/stats', { params });
 
     console.log('직원 통계 조회 응답:', response);
     return response;
@@ -170,12 +196,34 @@ export const searchEmployees = async (params: EmployeeSearchParams): Promise<Api
   try {
     console.log('직원 검색 요청:', params);
 
-    const response = await api.get('/api/employees/search', { params });
+    const response = await api.get<{ employees: Employee[] }>('/api/employees/search', { params });
 
     console.log('직원 검색 응답:', response);
     return response;
   } catch (error: unknown) {
     console.error('직원 검색 오류:', error);
+    throw error;
+  }
+};
+
+/**
+ * 직원 등록 (발령 연동)
+ * @param employeeData 직원 등록 데이터
+ * @returns 등록된 직원 정보 및 발령 정보
+ */
+export const createEmployee = async (employeeData: EmployeeCreateRequest): Promise<ApiResponse<{
+  employee: Employee;
+  assignment?: any;
+}>> => {
+  try {
+    console.log('🔄 직원 등록 요청:', employeeData);
+
+    const response = await api.post<{ employee: Employee; assignment?: any }>('/api/employees', employeeData);
+
+    console.log('✅ 직원 등록 성공:', response);
+    return response;
+  } catch (error: unknown) {
+    console.error('❌ 직원 등록 오류:', error);
     throw error;
   }
 };
@@ -188,7 +236,7 @@ export const getCurrentUser = async (): Promise<ApiResponse<{ user: Employee }>>
   try {
     console.log('현재 사용자 정보 조회 요청');
 
-    const response = await api.get('/api/auth/me');
+    const response = await api.get<{ user: Employee }>('/api/auth/me');
 
     console.log('현재 사용자 정보 조회 응답:', response);
     return response;
@@ -305,7 +353,7 @@ export const formatEmployeeName = (employee: Employee): string => {
  * @returns 조직 경로 문자열
  */
 export const formatOrganizationPath = (employee: Employee): string => {
-  return `${employee.CompanyName} > ${employee.SubCompanyName} > ${employee.DeptName} > ${employee.PosName}`;
+  return `${employee.companyName} > ${employee.subCompanyName} > ${employee.deptName} > ${employee.posName}`;
 };
 
 /**

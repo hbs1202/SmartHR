@@ -61,6 +61,11 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
+// Form values 타입 정의 (dayjs 객체 포함)
+interface SubCompanyFormValues extends Omit<SubCompanyCreateRequest, 'openDate'> {
+  openDate?: dayjs.Dayjs | string | null;
+}
+
 const SubCompanyList: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | undefined>(undefined);
@@ -302,24 +307,30 @@ const SubCompanyList: React.FC = () => {
   /**
    * 사업장 등록/수정 처리
    */
-  const handleModalSubmit = async (values: SubCompanyCreateRequest) => {
+  const handleModalSubmit = async (values: SubCompanyFormValues) => {
     try {
       setModalLoading(true);
 
+      // 날짜 변환 처리 (시간대 문제 해결)
+      const processedValues: SubCompanyCreateRequest = {
+        ...values,
+        openDate: values.openDate ?
+          (typeof values.openDate === 'string' ?
+            values.openDate :
+            (values.openDate && dayjs.isDayjs(values.openDate) ?
+              (values.openDate as dayjs.Dayjs).format('YYYY-MM-DD') :
+              undefined)
+          ) : undefined
+      };
+
       // 폼 유효성 검증
-      const validation = validateWorkplaceForm(values);
+      const validation = validateWorkplaceForm(processedValues);
       if (!validation.isValid) {
         validation.errors.forEach(error => {
           message.error(error);
         });
         return;
       }
-
-      // 날짜 변환 처리 (시간대 문제 해결)
-      const processedValues = {
-        ...values,
-        openDate: values.openDate ? (typeof values.openDate === 'string' ? values.openDate : values.openDate.format('YYYY-MM-DD')) : null
-      };
 
       let response;
 

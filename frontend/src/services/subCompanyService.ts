@@ -99,7 +99,7 @@ export const createWorkplace = async (data: SubCompanyCreateRequest): Promise<Ap
   try {
     console.log('사업장 등록 요청:', data);
 
-    const response = await api.post('/api/organization/subcompanies', data);
+    const response = await api.post<SubCompanyCreateResponse>('/api/organization/subcompanies', data);
 
     console.log('사업장 등록 응답:', response);
     return response;
@@ -121,7 +121,7 @@ export const getWorkplacesByCompany = async (companyId: number, params: SubCompa
 
     // 백엔드 API는 쿼리 파라미터로 companyId를 받음
     const queryParams = { ...params, companyId };
-    const response = await api.get('/api/organization/subcompanies', { params: queryParams });
+    const response = await api.get<SubCompanyListResponse>('/api/organization/subcompanies', { params: queryParams });
 
     console.log('사업장 목록 조회 응답:', response);
     return response;
@@ -140,7 +140,7 @@ export const getWorkplaceById = async (workplaceId: number): Promise<ApiResponse
   try {
     console.log('사업장 상세 조회 요청:', workplaceId);
 
-    const response = await api.get(`/api/organization/subcompanies/${workplaceId}`);
+    const response = await api.get<SubCompany>(`/api/organization/subcompanies/${workplaceId}`);
 
     console.log('사업장 상세 조회 응답:', response);
     return response;
@@ -163,7 +163,7 @@ export const updateWorkplace = async (
   try {
     console.log('사업장 정보 수정 요청:', { workplaceId, data });
 
-    const response = await api.put(`/api/organization/subcompanies/${workplaceId}`, data);
+    const response = await api.put<SubCompany>(`/api/organization/subcompanies/${workplaceId}`, data);
 
     console.log('사업장 정보 수정 응답:', response);
     return response;
@@ -182,7 +182,7 @@ export const deleteWorkplace = async (workplaceId: number): Promise<ApiResponse<
   try {
     console.log('사업장 삭제 요청:', workplaceId);
 
-    const response = await api.delete(`/api/organization/subcompanies/${workplaceId}`);
+    const response = await api.delete<{ workplaceId: number; deletedAt: string }>(`/api/organization/subcompanies/${workplaceId}`);
 
     console.log('사업장 삭제 응답:', response);
     return response;
